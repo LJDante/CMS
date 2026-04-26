@@ -1,7 +1,9 @@
 import { format } from 'date-fns'
-import { DEFAULT_DISPLAY_VALUE, GRADE_LEVEL_DB_MAP, GRADE_LEVEL_OPTIONS, COLLEGE_YEAR_LEVEL_OPTIONS } from '../constants'
+import { DEFAULT_DISPLAY_VALUE, GRADE_LEVEL_DB_MAP, K12_GRADE_LEVEL_FILTER_GROUPS } from '../constants'
 
 export type GradeLevel = keyof typeof GRADE_LEVEL_DB_MAP | 'all'
+export type GradeOption = { value: string; label: string }
+export type GradeOptionGroup = { label: string; options: GradeOption[] }
 
 export function displayValue(value: string | number | null | undefined, fallback = DEFAULT_DISPLAY_VALUE) {
   return value === undefined || value === null || value === '' ? fallback : String(value)
@@ -42,16 +44,12 @@ export function getGradeLevelDatabaseValues(gradeLevel: GradeLevel) {
   return gradeLevel === 'all' ? [] : GRADE_LEVEL_DB_MAP[gradeLevel] ?? []
 }
 
-export function getGradeFilterOptions(educationType: string) {
-  if (educationType === 'k12') {
-    return GRADE_LEVEL_OPTIONS
+export function getGradeFilterOptions(educationType: string): GradeOptionGroup[] {
+  if (educationType === 'k12' || educationType === 'all') {
+    return K12_GRADE_LEVEL_FILTER_GROUPS
   }
 
-  if (educationType === 'college') {
-    return COLLEGE_YEAR_LEVEL_OPTIONS
-  }
-
-  return [{ value: 'all', label: 'All Grade Levels' }] as const
+  return []
 }
 
 export interface GradeLevelQueryParams {
@@ -63,8 +61,11 @@ export interface GradeLevelQueryParams {
 export function getGradeLevelQueryParams(educationType: string, selectedGrade: string): GradeLevelQueryParams | null {
   if (selectedGrade === 'all' || !selectedGrade) return null
 
-  if (educationType === 'k12') {
-    if (selectedGrade === 'K') {
+  const targetType = educationType === 'all' ? 'k12' : educationType
+  const normalizedGrade = normalizeGradeValue(selectedGrade)
+
+  if (targetType === 'k12') {
+    if (normalizedGrade === 'K') {
       return {
         column: 'grade_level',
         values: ['K', 'Kindergarten'],
@@ -72,11 +73,11 @@ export function getGradeLevelQueryParams(educationType: string, selectedGrade: s
       }
     }
 
-    const numericGrade = Number(selectedGrade)
+    const numericGrade = Number(normalizedGrade)
     if (numericGrade >= 1 && numericGrade <= 10) {
       return {
         column: 'grade_level',
-        values: [selectedGrade, `Grade ${selectedGrade}`],
+        values: [String(numericGrade), `Grade ${numericGrade}`],
         educationLevels: ['k-12']
       }
     }
@@ -84,16 +85,16 @@ export function getGradeLevelQueryParams(educationType: string, selectedGrade: s
     if (numericGrade === 11 || numericGrade === 12) {
       return {
         column: 'year_level',
-        values: [selectedGrade],
+        values: [String(numericGrade)],
         educationLevels: ['shs']
       }
     }
   }
 
-  if (educationType === 'college') {
+  if (targetType === 'college') {
     return {
       column: 'year_level',
-      values: [selectedGrade],
+      values: [normalizeGradeValue(selectedGrade)],
       educationLevels: ['college']
     }
   }
@@ -105,27 +106,32 @@ export function isK12EducationLevel(level?: string | null) {
   return ['k-12', 'kindergarten', 'shs'].includes(level ?? '')
 }
 
-export function matchesGradeFilter(student: { grade_level?: string | null; year_level?: string | null; education_level?: string | null }, educationType: string, selectedGrade: string) {
+export function matchesGradeFilter(
+  student: { grade_level?: string | null; year_level?: string | null; education_level?: string | null },
+  educationType: string,
+  selectedGrade: string
+) {
   if (selectedGrade === 'all' || !selectedGrade) {
     return true
   }
 
+  const targetType = educationType === 'all' ? 'k12' : educationType
   const normalizedGrade = normalizeGradeValue(student.grade_level)
   const normalizedYear = normalizeGradeValue(student.year_level)
 
-  if (educationType === 'k12') {
+  if (targetType === 'k12') {
     if (selectedGrade === 'K') {
       return normalizedGrade === 'K'
     }
 
     if (selectedGrade === '11' || selectedGrade === '12') {
-      return normalizedGrade === selectedGrade || normalizedYear === selectedGrade
+      return student.education_level === 'shs' && (normalizedGrade === selectedGrade || normalizedYear === selectedGrade)
     }
 
     return normalizedGrade === selectedGrade
   }
 
-  if (educationType === 'college') {
+  if (targetType === 'college') {
     return student.education_level === 'college' && normalizedYear === selectedGrade
   }
 

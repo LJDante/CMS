@@ -182,12 +182,10 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
           </select>
         </div>
 
-        {/* Grade / Year Level Filter */}
-        {(educationType === 'k12' || educationType === 'college') && (
+        {/* Grade Level Filter for K-12 */}
+        {(educationType === 'k12' || educationType === 'all') && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              {educationType === 'college' ? 'Year Level' : 'Grade Level'}
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
             <select
               value={gradeLevel}
               onChange={(e) => {
@@ -196,17 +194,22 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
               }}
               className="input-field"
             >
-              {getGradeFilterOptions(educationType).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+              <option value="all">All Grade Levels</option>
+              {getGradeFilterOptions(educationType).map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>
         )}
 
         {/* Section Filter - Only show when grade level is selected */}
-        {educationType === 'k12' && gradeLevel !== 'all' && (
+        {(educationType === 'k12' || educationType === 'all') && gradeLevel !== 'all' && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Section</label>
             <select

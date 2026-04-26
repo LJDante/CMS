@@ -27,6 +27,40 @@ export const GRADE_LEVEL_OPTIONS = [
   { value: '12', label: 'Grade 12' }
 ] as const
 
+export const K12_GRADE_LEVEL_FILTER_GROUPS = [
+  {
+    label: 'Kindergarten',
+    options: [{ value: 'K', label: 'Kindergarten' }]
+  },
+  {
+    label: 'Elementary',
+    options: [
+      { value: '1', label: 'Grade 1' },
+      { value: '2', label: 'Grade 2' },
+      { value: '3', label: 'Grade 3' },
+      { value: '4', label: 'Grade 4' },
+      { value: '5', label: 'Grade 5' },
+      { value: '6', label: 'Grade 6' }
+    ]
+  },
+  {
+    label: 'Junior High School',
+    options: [
+      { value: '7', label: 'Grade 7' },
+      { value: '8', label: 'Grade 8' },
+      { value: '9', label: 'Grade 9' },
+      { value: '10', label: 'Grade 10' }
+    ]
+  },
+  {
+    label: 'Senior High School',
+    options: [
+      { value: '11', label: 'Grade 11' },
+      { value: '12', label: 'Grade 12' }
+    ]
+  }
+] as const
+
 export const COLLEGE_YEAR_LEVEL_OPTIONS = [
   { value: 'all', label: 'All Year Levels' },
   { value: '1', label: '1st Year' },
