@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # School Clinic Management Information System (SCMIS)
 
 Web-based La Consolacion College-Biñan built with **React + Vite + TypeScript** and **Supabase** (PostgreSQL, Auth, Storage).
@@ -528,3 +529,7 @@ npm run dev
 
 Then open the printed `http://localhost:5173` URL in your browser.
 
+=======
+# CMS
+Clinic Management System
+>>>>>>> 56a728c032dda50ac4561de0f3ec7a8e97dbc801
