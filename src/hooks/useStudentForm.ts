@@ -299,9 +299,13 @@ export function useStudentForm() {
       return
     }
 
-    // Education level changes — clear dependent errors
+    // Education level changes — auto-fill kindergarten grade and clear dependent errors
     if (name === 'education_level') {
-      setForm((f) => ({ ...f, education_level: value as EducationLevel }))
+      setForm((f) => ({
+        ...f,
+        education_level: value as EducationLevel,
+        grade_level: value === 'kindergarten' ? 'K' : ''
+      }))
       clearError('grade_level')
       clearError('shs_track')
       clearError('shs_grade')

@@ -238,6 +238,8 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                       inputMode="numeric"
                       maxLength={2}
                       placeholder={form.education_level === 'kindergarten' ? 'e.g. K' : form.education_level === 'elementary' ? 'e.g. 3' : 'e.g. 8'}
+                      readOnly={form.education_level === 'kindergarten'}
+                      aria-readonly={form.education_level === 'kindergarten'}
                     />
                     {errors.grade_level && <p className="text-xs text-red-600 mt-1">{errors.grade_level}</p>}
                   </div>

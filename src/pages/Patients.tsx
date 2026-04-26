@@ -258,7 +258,16 @@ export default function Patients() {
     if (field === 'first_name' || field === 'middle_name' || field === 'last_name' || field === 'guardian_name' || field === 'mother_name' || field === 'father_name' || field === 'person_to_notify') {
       value = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'. -]/g, '')
     }
-    if (field === 'sex' && value === 'F') {
+    if (field === 'grade_level') {
+      value = value.replace(/[^0-9]/g, '').slice(0, 2)
+    }
+    if (field === 'education_level') {
+      setEditedPatient(prev => prev ? {
+        ...prev,
+        education_level: value,
+        grade_level: value === 'kindergarten' ? 'K' : ''
+      } : null)
+    } else if (field === 'sex' && value === 'F') {
       setEditedPatient(prev => prev ? { ...prev, sex: value, suffix: undefined } : null)
     } else {
       setEditedPatient(prev => prev ? { ...prev, [field]: value } : null)
@@ -344,7 +353,7 @@ export default function Patients() {
 
     setIsSavingPatient(true)
     try {
-      const updateData = {
+      const updateData: Record<string, unknown> = {
         first_name: editedPatient.first_name,
         middle_name: editedPatient.middle_name,
         last_name: editedPatient.last_name,
@@ -368,6 +377,13 @@ export default function Patients() {
         city: editedPatient.city,
         province: editedPatient.province,
         zip_code: editedPatient.zip_code,
+      }
+      if (editedPatient.patient_type === 'student') {
+        updateData.education_level = editedPatient.education_level
+        updateData.grade_level = ['k-12', 'kindergarten'].includes(editedPatient.education_level || '') ? editedPatient.grade_level : null
+        updateData.section = ['k-12', 'kindergarten'].includes(editedPatient.education_level || '') ? editedPatient.section : null
+        updateData.program = ['shs', 'college'].includes(editedPatient.education_level || '') ? editedPatient.program : null
+        updateData.year_level = ['shs', 'college'].includes(editedPatient.education_level || '') ? editedPatient.year_level : null
       }
 
       const { error } = await supabase
@@ -1249,44 +1265,136 @@ export default function Patients() {
                 <div>
                   <h3 className="mb-3 text-sm font-semibold text-slate-700">Education Information</h3>
                   <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
-                      <p className="text-sm mt-1 capitalize">{selectedPatient.education_level || 'N/A'}</p>
-                    </div>
-                    {(selectedPatient.education_level === 'k-12' || selectedPatient.education_level === 'kindergarten') && (
+                    {isEditingPatient ? (
                       <>
                         <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
-                          <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
+                          <select
+                            value={displayPatient?.education_level || 'elementary'}
+                            onChange={(e) => handlePatientFieldChange('education_level', e.target.value)}
+                            className="input-field mt-1"
+                          >
+                            <option value="kindergarten">Kindergarten</option>
+                            <option value="elementary">Elementary (Grades 1–6)</option>
+                            <option value="junior-high-school">Junior High School (Grades 7–10)</option>
+                            <option value="shs">Senior High School</option>
+                            <option value="college">College</option>
+                          </select>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
-                          <p className="text-sm mt-1">{selectedPatient.section || 'N/A'}</p>
-                        </div>
+                        {(displayPatient?.education_level === 'elementary' || displayPatient?.education_level === 'junior-high-school' || displayPatient?.education_level === 'kindergarten') && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.grade_level || ''}
+                                onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
+                                className="input-field mt-1"
+                                placeholder={displayPatient?.education_level === 'kindergarten' ? 'e.g. K' : displayPatient?.education_level === 'elementary' ? 'e.g. 3' : 'e.g. 8'}
+                                readOnly={displayPatient?.education_level === 'kindergarten'}
+                                aria-readonly={displayPatient?.education_level === 'kindergarten'}
+                              />
+                              {editErrors.grade_level && <p className="text-xs text-red-600 mt-1">{editErrors.grade_level}</p>}
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.section || ''}
+                                onChange={(e) => handlePatientFieldChange('section', e.target.value)}
+                                className="input-field mt-1"
+                                placeholder="e.g. Rizal"
+                              />
+                            </div>
+                          </>
+                        )}
+                        {displayPatient?.education_level === 'shs' && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.program || ''}
+                                onChange={(e) => handlePatientFieldChange('program', e.target.value)}
+                                className="input-field mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.year_level || ''}
+                                onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
+                                className="input-field mt-1"
+                              />
+                            </div>
+                          </>
+                        )}
+                        {displayPatient?.education_level === 'college' && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.program || ''}
+                                onChange={(e) => handlePatientFieldChange('program', e.target.value)}
+                                className="input-field mt-1"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                              <input
+                                type="text"
+                                value={displayPatient?.year_level || ''}
+                                onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
+                                className="input-field mt-1"
+                              />
+                            </div>
+                          </>
+                        )}
                       </>
-                    )}
-                    {selectedPatient.education_level === 'shs' && (
+                    ) : (
                       <>
                         <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                          <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
+                          <p className="text-sm mt-1 capitalize">{selectedPatient.education_level || 'N/A'}</p>
                         </div>
-                        <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                          <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
-                        </div>
-                      </>
-                    )}
-                    {selectedPatient.education_level === 'college' && (
-                      <>
-                        <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
-                          <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
-                          <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
-                        </div>
+                        {(selectedPatient.education_level === 'k-12' || selectedPatient.education_level === 'kindergarten') && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                              <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                              <p className="text-sm mt-1">{selectedPatient.section || 'N/A'}</p>
+                            </div>
+                          </>
+                        )}
+                        {selectedPatient.education_level === 'shs' && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                              <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
+                              <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
+                            </div>
+                          </>
+                        )}
+                        {selectedPatient.education_level === 'college' && (
+                          <>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                              <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                              <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
+                            </div>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
