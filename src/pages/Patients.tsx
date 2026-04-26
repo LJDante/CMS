@@ -8,13 +8,13 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 import * as ExcelJS from 'exceljs'
-import { EDUCATION_TYPE_OPTIONS, GRADE_LEVEL_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../constants'
-import { getGradeLevelDatabaseValues, isK12EducationLevel } from '../utils/helpers'
+import { EDUCATION_TYPE_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../constants'
+import { getGradeFilterOptions, getGradeLevelQueryParams, isK12EducationLevel, matchesGradeFilter } from '../utils/helpers'
 import philippinesData from '../constants/philippines.json'
 import Papa from 'papaparse'
 
 type EducationType = 'all' | 'k12' | 'college' | 'personnel'
-type GradeLevel = 'all' | 'kindergarten' | 'elementary' | 'jhs' | 'shs'
+type GradeLevel = string
 type GuardianFilter = 'all' | 'has-contact' | 'no-contact'
 
 export default function Patients() {
@@ -85,19 +85,22 @@ export default function Patients() {
 
       setLoadingSections(true)
       try {
-        const gradeLevelQueries = getGradeLevelDatabaseValues(gradeLevel)
+        const queryParams = getGradeLevelQueryParams(educationType, gradeLevel)
 
-        if (gradeLevelQueries.length === 0) {
+        if (!queryParams) {
           setAvailableSections([])
           return
         }
 
-        // Fetch all patients with matching grade levels and get unique sections
-        const { data, error } = await supabase
-          .from('patients')
-          .select('section')
-          .in('grade_level', gradeLevelQueries)
-        
+        let query = supabase.from('patients').select('section')
+
+        if (queryParams.educationLevels?.length) {
+          query = query.in('education_level', queryParams.educationLevels)
+        }
+
+        query = query.in(queryParams.column, queryParams.values)
+
+        const { data, error } = await query
         if (error) {
           console.error('Failed to fetch sections:', error)
           setAvailableSections([])
@@ -440,26 +443,8 @@ export default function Patients() {
     }
 
     // Grade level filter (only applies when education type is K-12)
-    if (educationType === 'k12' && gradeLevel !== 'all') {
-      const studentGradeLevelDb = s.grade_level
-      let matches = false
-
-      switch (gradeLevel) {
-        case 'kindergarten':
-          matches = studentGradeLevelDb === 'Kindergarten'
-          break
-        case 'elementary':
-          matches = /^Grade [1-6]$/.test(studentGradeLevelDb ?? '')
-          break
-        case 'jhs':
-          matches = /^Grade (7|8|9|10)$/.test(studentGradeLevelDb ?? '')
-          break
-        case 'shs':
-          matches = /^Grade (11|12)$/.test(studentGradeLevelDb ?? '')
-          break
-      }
-
-      if (!matches) return false
+    if (gradeLevel !== 'all') {
+      if (!matchesGradeFilter(s, educationType, gradeLevel)) return false
     }
 
     // Section filter (only applies when grade level is selected)
@@ -879,10 +864,12 @@ export default function Patients() {
           </select>
         </div>
 
-        {/* Grade Level Filter - Only show for K-12 */}
-        {educationType === 'k12' && (
+        {/* Grade / Year Level Filter */}
+        {(educationType === 'k12' || educationType === 'college') && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              {educationType === 'college' ? 'Year Level' : 'Grade Level'}
+            </label>
             <select
               value={gradeLevel}
               onChange={(e) => {
@@ -891,7 +878,7 @@ export default function Patients() {
               }}
               className="input-field"
             >
-              {GRADE_LEVEL_OPTIONS.map((option) => (
+              {getGradeFilterOptions(educationType).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

@@ -12,10 +12,27 @@ export const EDUCATION_TYPE_OPTIONS = [
 
 export const GRADE_LEVEL_OPTIONS = [
   { value: 'all', label: 'All Grade Levels' },
-  { value: 'kindergarten', label: 'Kindergarten' },
-  { value: 'elementary', label: 'Elementary (Grades 1–6)' },
-  { value: 'jhs', label: 'Junior High (Grades 7-10)' },
-  { value: 'shs', label: 'Senior High (Grades 11-12)' }
+  { value: 'K', label: 'Kindergarten' },
+  { value: '1', label: 'Grade 1' },
+  { value: '2', label: 'Grade 2' },
+  { value: '3', label: 'Grade 3' },
+  { value: '4', label: 'Grade 4' },
+  { value: '5', label: 'Grade 5' },
+  { value: '6', label: 'Grade 6' },
+  { value: '7', label: 'Grade 7' },
+  { value: '8', label: 'Grade 8' },
+  { value: '9', label: 'Grade 9' },
+  { value: '10', label: 'Grade 10' },
+  { value: '11', label: 'Grade 11' },
+  { value: '12', label: 'Grade 12' }
+] as const
+
+export const COLLEGE_YEAR_LEVEL_OPTIONS = [
+  { value: 'all', label: 'All Year Levels' },
+  { value: '1', label: '1st Year' },
+  { value: '2', label: '2nd Year' },
+  { value: '3', label: '3rd Year' },
+  { value: '4', label: '4th Year' }
 ] as const
 
 export const SCHOOL_YEAR_OPTIONS = [
@@ -26,10 +43,32 @@ export const SCHOOL_YEAR_OPTIONS = [
 ] as const
 
 export const GRADE_LEVEL_DB_MAP = {
-  kindergarten: ['Kindergarten'],
-  elementary: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'],
-  jhs: ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'],
-  shs: ['Grade 11', 'Grade 12']
+  kindergarten: ['K', 'Kindergarten'],
+  elementary: [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    'Grade 1',
+    'Grade 2',
+    'Grade 3',
+    'Grade 4',
+    'Grade 5',
+    'Grade 6'
+  ],
+  jhs: [
+    '7',
+    '8',
+    '9',
+    '10',
+    'Grade 7',
+    'Grade 8',
+    'Grade 9',
+    'Grade 10'
+  ],
+  shs: ['11', '12', 'Grade 11', 'Grade 12']
 } as const
 
 export const CONSULTATION_STATUS_OPTIONS = [
