@@ -1,0 +1,75 @@
+/* stylelint-disable at-rule-no-unknown */
+/* stylelint-disable declaration-block-no-unknown-properties */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased text-base leading-relaxed;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-50;
+  }
+
+  /* Typography hierarchy */
+  h1 {
+    @apply text-3xl font-semibold;
+  }
+
+  h2, h3, h4, h5, h6 {
+    @apply text-xl font-semibold;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+  }
+
+  /* Labels and captions */
+  label, caption, .text-caption {
+    @apply text-sm font-medium;
+  }
+
+  /* Table text minimum size */
+  table, td, th {
+    @apply text-base;
+  }
+
+  /* Form elements */
+  input, textarea, select {
+    @apply text-base;
+  }
+}
+
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+
+  .btn-xs {
+    @apply px-2 py-1 text-sm;
+  }
+
+  .card {
+    @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm;
+  }
+
+  .input-field {
+    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-base focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500;
+  }
+}
+
