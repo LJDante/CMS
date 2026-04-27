@@ -11,6 +11,7 @@ interface DashboardStats {
   distinctStudents: number
   sentHome: number
   referred: number
+  returnedToClass: number
 }
 
 interface RecentActivityItem {
@@ -77,11 +78,13 @@ export default function Dashboard() {
       const distinctStudents = new Set(visitData.map((v) => v.patient_id)).size
       const sentHome = visitData.filter((v) => v.disposition === 'sent_home').length
       const referred = visitData.filter((v) => v.disposition === 'referred').length
+      const returnedToClass = visitData.filter((v) => v.disposition === 'returned_to_class').length
       setStats({
         todayVisits: visitData.length,
         distinctStudents,
         sentHome,
-        referred
+        referred,
+        returnedToClass
       })
 
       const inventoryData = inventoryResult.status === 'fulfilled' && !inventoryResult.value.error ? (inventoryResult.value.data as Array<{ id: string; quantity_on_hand: number; reorder_level: number | null }>) : []
@@ -209,6 +212,10 @@ export default function Dashboard() {
         <div className="card">
           <p className="text-sm font-medium text-slate-500">Sent home</p>
           <p className="mt-2 text-3xl font-bold text-slate-800">{stats?.sentHome ?? '—'}</p>
+        </div>
+        <div className="card">
+          <p className="text-sm font-medium text-slate-500">Returned to class</p>
+          <p className="mt-2 text-3xl font-bold text-slate-800">{stats?.returnedToClass ?? '—'}</p>
         </div>
         <div className="card">
           <p className="text-sm font-medium text-slate-500">Referred</p>
