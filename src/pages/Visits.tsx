@@ -86,11 +86,11 @@ export default function Visits() {
         .order('full_name')
       setDoctors((doctorData ?? []) as Profile[])
 
-      // Load staff (clinic_staff role)
+      // Load staff (clinic_staff and clinic_nurse roles)
       const { data: staffData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'clinic_staff')
+        .in('role', ['clinic_staff', 'clinic_nurse'])
         .order('full_name')
       setStaff((staffData ?? []) as Profile[])
     }

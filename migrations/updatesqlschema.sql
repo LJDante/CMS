@@ -193,7 +193,7 @@ END,
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   full_name text NOT NULL,
-  role text NOT NULL CHECK (role = ANY (ARRAY['clinic_staff'::text, 'clinic_admin'::text, 'clinic_doctor'::text])),
+  role text NOT NULL CHECK (role = ANY (ARRAY['clinic_staff'::text, 'clinic_nurse'::text, 'clinic_admin'::text, 'clinic_doctor'::text])),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   email text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),

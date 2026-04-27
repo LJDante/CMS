@@ -1,4 +1,4 @@
-export type Role = 'clinic_staff' | 'clinic_admin' | 'clinic_doctor'
+export type Role = 'clinic_staff' | 'clinic_nurse' | 'clinic_admin' | 'clinic_doctor'
 
 export interface Profile {
   id: string

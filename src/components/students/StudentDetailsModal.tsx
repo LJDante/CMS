@@ -44,7 +44,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
 
-  const isNurseOrDoctor = role === 'clinic_staff' || role === 'clinic_doctor' || role === 'clinic_admin'
+  const isNurseOrDoctor = role === 'clinic_staff' || role === 'clinic_nurse' || role === 'clinic_doctor' || role === 'clinic_admin'
   const canEdit = isNurseOrDoctor
 
   const startEdit = () => {

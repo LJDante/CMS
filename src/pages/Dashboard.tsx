@@ -31,6 +31,7 @@ type StaffAccount = Profile & {
 
 const ROLE_LABELS: Record<Role, string> = {
   clinic_staff: 'Clinic Staff',
+  clinic_nurse: 'Clinic Nurse',
   clinic_doctor: 'Clinic Doctor',
   clinic_admin: 'Clinic Admin'
 }

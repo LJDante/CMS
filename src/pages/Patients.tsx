@@ -83,8 +83,8 @@ export default function Patients() {
   const [availableSections, setAvailableSections] = useState<string[]>([])
   const [loadingSections, setLoadingSections] = useState(false)
 
-  // Check if user can edit patient info (staff and doctors)
-  const canEditPatientInfo = profile?.role === 'clinic_staff' || profile?.role === 'clinic_doctor' || profile?.role === 'clinic_admin'
+  // Check if user can edit patient info (staff, nurses, and doctors)
+  const canEditPatientInfo = profile?.role === 'clinic_staff' || profile?.role === 'clinic_nurse' || profile?.role === 'clinic_doctor' || profile?.role === 'clinic_admin'
 
   const loadPatients = async () => {
     setLoading(true)

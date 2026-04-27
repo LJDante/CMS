@@ -15,7 +15,7 @@ BEGIN
   );
   
   -- Validate role
-  IF user_role NOT IN ('clinic_staff', 'clinic_admin', 'clinic_doctor') THEN
+  IF user_role NOT IN ('clinic_staff', 'clinic_nurse', 'clinic_admin', 'clinic_doctor') THEN
     user_role := 'clinic_staff';
   END IF;
   

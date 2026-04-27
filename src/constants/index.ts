@@ -1,6 +1,6 @@
 export const DEFAULT_DISPLAY_VALUE = 'N/A'
 
-export const PATIENT_EDIT_ROLES = ['clinic_staff', 'clinic_doctor', 'clinic_admin'] as const
+export const PATIENT_EDIT_ROLES = ['clinic_staff', 'clinic_nurse', 'clinic_doctor', 'clinic_admin'] as const
 export type PatientEditRole = (typeof PATIENT_EDIT_ROLES)[number]
 
 export const EDUCATION_TYPE_OPTIONS = [

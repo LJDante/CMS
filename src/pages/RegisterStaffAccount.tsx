@@ -7,7 +7,7 @@ interface FormData {
   fullName: string
   email: string
   password: string
-  role: 'clinic_doctor' | 'clinic_staff'
+  role: 'clinic_doctor' | 'clinic_nurse' | 'clinic_staff'
 }
 
 interface RegisterStaffAccountProps {
@@ -179,6 +179,7 @@ export default function RegisterStaffAccount({ hideHeader = false }: RegisterSta
               required
             >
               <option value="clinic_staff">Clinic Staff</option>
+              <option value="clinic_nurse">Clinic Nurse</option>
               <option value="clinic_doctor">Clinic Doctor</option>
             </select>
           </div>

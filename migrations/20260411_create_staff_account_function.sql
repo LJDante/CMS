@@ -38,8 +38,8 @@ BEGIN
     RETURN json_build_object('error', 'Password must be at least 6 characters');
   END IF;
 
-  IF p_role NOT IN ('clinic_doctor', 'clinic_staff') THEN
-    RETURN json_build_object('error', 'Invalid role. Must be clinic_doctor or clinic_staff');
+  IF p_role NOT IN ('clinic_doctor', 'clinic_nurse', 'clinic_staff') THEN
+    RETURN json_build_object('error', 'Invalid role. Must be clinic_doctor, clinic_nurse, or clinic_staff');
   END IF;
 
   -- Create the user account

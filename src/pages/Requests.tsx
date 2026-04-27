@@ -204,7 +204,7 @@ export default function Requests() {
                   </span>
                 </td>
                 <td className="px-4 py-3 capitalize">
-                  {(profile?.role === 'clinic_staff' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') ? (
+                  {(profile?.role === 'clinic_staff' || profile?.role === 'clinic_nurse' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') ? (
                     <select
                       className="input-field w-44"
                       value={r.status}
@@ -240,7 +240,7 @@ export default function Requests() {
                       <FileText className="h-4 w-4" />
                       Generate Form
                     </button>
-                    {r.status === 'approved' && (profile?.role === 'clinic_staff' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') && (
+                    {r.status === 'approved' && (profile?.role === 'clinic_staff' || profile?.role === 'clinic_nurse' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') && (
                       <button
                         onClick={() => handleStatusChange(r.id, 'fulfilled')}
                         disabled={!!updating[r.id]}
@@ -249,7 +249,7 @@ export default function Requests() {
                         {updating[r.id] ? 'Processing...' : 'Mark as Received'}
                       </button>
                     )}
-                    {(r.status === 'pending' || r.status === 'approved') && (profile?.role === 'clinic_staff' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') && (
+                    {(r.status === 'pending' || r.status === 'approved') && (profile?.role === 'clinic_staff' || profile?.role === 'clinic_nurse' || profile?.role === 'clinic_admin' || profile?.role === 'clinic_doctor') && (
                       <button
                         onClick={() => handleDeleteRequest(r.id)}
                         disabled={!!deleting[r.id]}
