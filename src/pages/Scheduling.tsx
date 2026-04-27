@@ -25,6 +25,14 @@ const truncateStaffName = (name: string, maxLength = 24): string => {
   return `${name.slice(0, maxLength - 3)}...`
 }
 
+const formatRole = (role: string | undefined) => {
+  if (!role) return 'Staff'
+  return role
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 interface FormData {
   staff_id: string
   schedule_date: string
@@ -614,7 +622,7 @@ export default function Scheduling() {
             </button>
           </div>
           <button
-            onClick={openAddModal}
+            onClick={() => openAddModal()}
             className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
           >
             <Plus className="h-5 w-5" />
@@ -803,7 +811,7 @@ export default function Scheduling() {
                       {getDisplayName(row.staff.full_name, row.staff.role)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600 capitalize">
-                      {row.staff.role || 'Staff'}
+                      {formatRole(row.staff.role)}
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-700">
                       {row.days.length > 0 ? row.days.join(', ') : '-'}
