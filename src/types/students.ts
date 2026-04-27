@@ -25,7 +25,13 @@ export type StudentFormData = {
   guardian_contact: string
   guardian_email: string
   mother_name: string
+  mother_first_name: string
+  mother_middle_name: string
+  mother_last_name: string
   father_name: string
+  father_first_name: string
+  father_middle_name: string
+  father_last_name: string
   suffix: string
   father_suffix: string
   person_to_notify: string
@@ -61,7 +67,13 @@ export const initialFormData: StudentFormData = {
   guardian_contact: '',
   guardian_email: '',
   mother_name: '',
+  mother_first_name: '',
+  mother_middle_name: '',
+  mother_last_name: '',
   father_name: '',
+  father_first_name: '',
+  father_middle_name: '',
+  father_last_name: '',
   suffix: '',
   father_suffix: '',
   person_to_notify: '',

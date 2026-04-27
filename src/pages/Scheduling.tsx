@@ -260,6 +260,8 @@ export default function Scheduling() {
     }
   }
 
+  const fetchSchedules = fetchStaffAndSchedules
+
   function getDaysInMonth(date: Date) {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   }
@@ -515,51 +517,67 @@ export default function Scheduling() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('Are you sure you want to delete this schedule?')) {
-      return
-    }
-
-    try {
-      const { error } = await supabase.from('staff_schedules').delete().eq('id', id)
-
+const handleDeleteSchedule = async (scheduleId: string) => {
+  try {
+    if (scheduleId.startsWith('recurring_')) {
+      const match = scheduleId.match(/^recurring_([0-9a-fA-F-]{36})_\d+$/)
+      if (!match) {
+        throw new Error('Invalid recurring schedule id')
+      }
+      const cleanId = match[1]
+      const { error } = await supabase
+        .from('recurring_schedules')
+        .delete()
+        .eq('id', cleanId)
       if (error) throw error
-      setSuccess('Schedule deleted successfully')
-      fetchStaffAndSchedules()
-    } catch (error) {
-      console.error('Error deleting schedule:', error)
-      setError('Failed to delete schedule')
+    } else {
+      const { error } = await supabase
+        .from('staff_schedules')
+        .delete()
+        .eq('id', scheduleId)
+      if (error) throw error
     }
+    toast.success('Schedule deleted successfully')
+    setSelectedDaySchedules(prev => prev.filter(s => s.id !== scheduleId))
+    fetchSchedules()
+  } catch (error) {
+    console.error('Error deleting schedule:', error)
+    toast.error('Failed to delete schedule')
   }
+}
 
   async function handleDeleteAll() {
-    const confirmMessage = selectedStaff
-      ? `Delete all schedules for the selected staff member in ${monthName}? This action applies to all users.`
-      : `Delete all schedules in ${monthName}? This action applies to all users.`
-
-    if (!confirm(confirmMessage)) {
-      return
-    }
+    const confirmed = window.confirm('Are you sure you want to delete ALL schedules? This action cannot be undone.')
+    if (!confirmed) return
 
     try {
       setSubmitting(true)
-      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
 
       let deleteQuery = supabase
         .from('staff_schedules')
         .delete()
-        .gte('schedule_date', startOfMonth.toISOString().split('T')[0])
-        .lte('schedule_date', endOfMonth.toISOString().split('T')[0])
+        .neq('id', '00000000-0000-0000-0000-000000000000')
 
       if (selectedStaff) {
         deleteQuery = deleteQuery.eq('staff_id', selectedStaff)
       }
 
       const { error } = await deleteQuery
-
       if (error) throw error
-      setSuccess(`All schedules deleted successfully`)
+
+      let recurringDeleteQuery = supabase
+        .from('recurring_schedules')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000')
+
+      if (selectedStaff) {
+        recurringDeleteQuery = recurringDeleteQuery.eq('staff_id', selectedStaff)
+      }
+
+      const { error: recurringError } = await recurringDeleteQuery
+      if (recurringError) throw recurringError
+
+      setSuccess('All schedules deleted successfully')
       fetchStaffAndSchedules()
     } catch (error) {
       console.error('Error deleting schedules:', error)
@@ -862,7 +880,7 @@ export default function Scheduling() {
                         type="button"
                         onClick={() => {
                           closeDayDetails()
-                          handleDelete(schedule.id)
+                          handleDeleteSchedule(schedule.id)
                         }}
                         className="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
                       >

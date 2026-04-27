@@ -1,7 +1,29 @@
 import { X, Edit2, Check, X as XIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
-import type { Student } from '../../types'
-import type { Role } from '../../types'
+import type { Role, Student } from '../../types'
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  } catch {
+    return 'N/A'
+  }
+}
+
+const formatParentFullName = (first?: string | null, middle?: string | null, last?: string | null, suffix?: string | null) => {
+  const parts = [first, middle, last]
+    .map((part) => String(part || '').trim())
+    .filter(Boolean)
+  if (parts.length === 0) return 'N/A'
+  const name = parts.join(' ')
+  return suffix ? `${name} ${suffix}` : name
+}
 import toast from 'react-hot-toast'
 import { supabase } from '../../lib/supabaseClient'
 import philippinesData from '../../constants/philippines.json'
@@ -18,6 +40,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [formData, setFormData] = useState<Partial<Student> | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
 
@@ -34,11 +57,57 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
     setIsEditing(false)
   }
 
+  const normalizePhone = (val: any) => {
+    if (!val) return null
+    let digits = String(val).trim().replace(/\D/g, '')
+
+    if (digits.startsWith('63') && digits.length === 12) {
+      digits = '0' + digits.slice(2)
+    }
+
+    if (digits.length === 10 && digits.startsWith('9')) {
+      digits = '0' + digits
+    }
+
+    if (digits.length === 11 && digits.startsWith('0')) {
+      return digits
+    }
+
+    console.log(`Unparseable phone number: ${val} → digits: ${digits}`)
+    return null
+  }
+
   const handleFieldChange = (field: keyof Student, value: any) => {
     if (field === 'sex' && value === 'F') {
       setFormData(prev => prev ? { ...prev, sex: value, suffix: undefined } : null)
     } else {
       setFormData(prev => prev ? { ...prev, [field]: value } : null)
+    }
+
+    if (field === 'contact_number' || field === 'guardian_contact' || field === 'emergency_contact') {
+      setFieldErrors((prev) => {
+        const { [field]: _removed, ...rest } = prev
+        return rest
+      })
+    }
+  }
+
+  const handlePhoneBlur = (field: keyof Student) => {
+    if (!formData) return
+    const value = String(formData[field] || '')
+    const normalized = normalizePhone(value)
+
+    if (normalized) {
+      setFormData((prev) => prev ? { ...prev, [field]: normalized } : prev)
+      setFieldErrors((prev) => {
+        const { [field]: _removed, ...rest } = prev
+        return rest
+      })
+      return
+    }
+
+    if (value.trim()) {
+      setFieldErrors((prev) => ({ ...prev, [field]: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
     }
   }
 
@@ -67,6 +136,28 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
 
     setIsSaving(true)
     try {
+      const contactNumber = normalizePhone(formData.contact_number)
+      const guardianContact = normalizePhone(formData.guardian_contact)
+      const emergencyContact = normalizePhone(formData.emergency_contact)
+
+      if (formData.contact_number && !contactNumber) {
+        setFieldErrors((prev) => ({ ...prev, contact_number: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        return
+      }
+
+      if (formData.guardian_contact && !guardianContact) {
+        setFieldErrors((prev) => ({ ...prev, guardian_contact: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        return
+      }
+
+      if (formData.emergency_contact && !emergencyContact) {
+        setFieldErrors((prev) => ({ ...prev, emergency_contact: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        return
+      }
+
       const updateData = {
         first_name: formData.first_name,
         middle_name: formData.middle_name,
@@ -74,14 +165,19 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
         suffix: formData.sex === 'M' ? formData.suffix || null : null,
         age: formData.age,
         date_of_birth: formData.date_of_birth,
-        contact_number: formData.contact_number,
+        contact_number: contactNumber,
         guardian_name: formData.guardian_name,
-        guardian_contact: formData.guardian_contact,
+        guardian_contact: guardianContact,
         guardian_email: formData.guardian_email,
-        mother_name: formData.mother_name,
-        father_name: formData.father_name,
+        mother_first_name: formData.mother_first_name || null,
+        mother_middle_name: formData.mother_middle_name || null,
+        mother_last_name: formData.mother_last_name || null,
+        father_first_name: formData.father_first_name || null,
+        father_middle_name: formData.father_middle_name || null,
+        father_last_name: formData.father_last_name || null,
+        father_suffix: formData.father_suffix || null,
         person_to_notify: formData.person_to_notify,
-        emergency_contact: formData.emergency_contact,
+        emergency_contact: emergencyContact,
         voucher_type: formData.voucher_type,
         allergies: formData.allergies,
         diagnosed_diseases: formData.diagnosed_diseases,
@@ -90,6 +186,12 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
         city: formData.city,
         province: formData.province,
         zip_code: formData.zip_code,
+        education_level: formData.education_level || null,
+        grade_level: ['k-12', 'kindergarten', 'shs'].includes(formData.education_level || '') ? formData.grade_level || null : null,
+        section: ['k-12', 'kindergarten'].includes(formData.education_level || '') ? formData.section || null : null,
+        shs_track: formData.education_level === 'shs' ? formData.shs_track || null : null,
+        program: formData.education_level === 'college' ? formData.program || null : null,
+        year_level: formData.education_level === 'college' ? formData.year_level || null : null,
       }
 
       const { error } = await supabase
@@ -280,18 +382,22 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                     className="input-field mt-1"
                   />
                 ) : (
-                  <p className="text-sm mt-1">{displayData?.date_of_birth || 'N/A'}</p>
+                  <p className="text-sm mt-1">{formatDate(displayData?.date_of_birth || null)}</p>
                 )}
               </div>
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Contact Number</label>
                 {isEditing ? (
-                  <input
-                    type="tel"
-                    value={displayData?.contact_number || ''}
-                    onChange={(e) => handleFieldChange('contact_number', e.target.value)}
-                    className="input-field mt-1"
-                  />
+                  <>
+                    <input
+                      type="tel"
+                      value={displayData?.contact_number || ''}
+                      onChange={(e) => handleFieldChange('contact_number', e.target.value)}
+                      onBlur={() => handlePhoneBlur('contact_number')}
+                      className="input-field mt-1"
+                    />
+                    {fieldErrors.contact_number && <p className="text-xs text-red-600 mt-1">{fieldErrors.contact_number}</p>}
+                  </>
                 ) : (
                   <p className="text-sm mt-1">{displayData?.contact_number || 'N/A'}</p>
                 )}
@@ -304,44 +410,174 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
             <div>
               <h3 className="mb-3 text-sm font-semibold text-slate-700">Education Information</h3>
               <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                <div>
-                  <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
-                  <p className="text-sm mt-1 capitalize">{student.education_level?.replace('-', ' ') || 'N/A'}</p>
-                </div>
-                {(student.education_level === 'k-12' || student.education_level === 'kindergarten') && (
+                {isEditing ? (
                   <>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
-                      <p className="text-sm mt-1">{student.grade_level || 'N/A'}</p>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
+                      <select
+                        value={displayData?.education_level || 'elementary'}
+                        onChange={(e) => handleFieldChange('education_level', e.target.value)}
+                        className="input-field mt-1"
+                      >
+                        <option value="kindergarten">Kindergarten</option>
+                        <option value="elementary">Elementary (Grades 1–6)</option>
+                        <option value="junior-high-school">Junior High School (Grades 7–10)</option>
+                        <option value="shs">Senior High School</option>
+                        <option value="college">College</option>
+                      </select>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
-                      <p className="text-sm mt-1">{student.section || 'N/A'}</p>
-                    </div>
+                    {(displayData?.education_level === 'elementary' || displayData?.education_level === 'junior-high-school' || displayData?.education_level === 'kindergarten') && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                          {displayData?.education_level === 'kindergarten' ? (
+                            <input
+                              type="text"
+                              value={displayData?.grade_level || 'K'}
+                              readOnly
+                              aria-readonly="true"
+                              className="input-field mt-1"
+                            />
+                          ) : (
+                            <select
+                              name="grade_level"
+                              value={displayData?.grade_level || ''}
+                              onChange={(e) => handleFieldChange('grade_level', e.target.value)}
+                              className="input-field mt-1"
+                            >
+                              <option value="">Select Grade Level</option>
+                              <optgroup label="Elementary">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                              </optgroup>
+                              <optgroup label="Junior High School">
+                                <option value="7">7</option>
+                                <option value="8">8</option>
+                                <option value="9">9</option>
+                                <option value="10">10</option>
+                              </optgroup>
+                            </select>
+                          )}
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                          <input
+                            type="text"
+                            value={displayData?.section || ''}
+                            onChange={(e) => handleFieldChange('section', e.target.value)}
+                            className="input-field mt-1"
+                            placeholder="e.g. Rizal"
+                          />
+                        </div>
+                      </>
+                    )}
+                    {displayData?.education_level === 'shs' && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                          <select
+                            name="grade_level"
+                            value={displayData?.grade_level || ''}
+                            onChange={(e) => handleFieldChange('grade_level', e.target.value)}
+                            className="input-field mt-1"
+                          >
+                            <option value="">Select SHS Grade</option>
+                            <option value="11">11</option>
+                            <option value="12">12</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                          <select
+                            name="shs_track"
+                            value={displayData?.shs_track || ''}
+                            onChange={(e) => handleFieldChange('shs_track', e.target.value)}
+                            className="input-field mt-1"
+                          >
+                            <option value="">Select SHS Track</option>
+                            <option value="ABM">ABM</option>
+                            <option value="HUMSS">HUMSS</option>
+                            <option value="STEM">STEM</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                    {displayData?.education_level === 'college' && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                          <input
+                            type="text"
+                            value={displayData?.program || ''}
+                            onChange={(e) => handleFieldChange('program', e.target.value)}
+                            className="input-field mt-1"
+                            placeholder="e.g. BSCS"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                          <select
+                            name="year_level"
+                            value={displayData?.year_level || ''}
+                            onChange={(e) => handleFieldChange('year_level', e.target.value)}
+                            className="input-field mt-1"
+                          >
+                            <option value="">Select Year Level</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
                   </>
-                )}
-                {student.education_level === 'shs' && (
+                ) : (
                   <>
                     <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                      <p className="text-sm mt-1">{student.program || 'N/A'}</p>
+                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
+                      <p className="text-sm mt-1 capitalize">{student.education_level?.replace('-', ' ') || 'N/A'}</p>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                      <p className="text-sm mt-1">{student.grade_level || student.year_level || 'N/A'}</p>
-                    </div>
-                  </>
-                )}
-                {student.education_level === 'college' && (
-                  <>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
-                      <p className="text-sm mt-1">{student.program || 'N/A'}</p>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
-                      <p className="text-sm mt-1">{student.year_level || 'N/A'}</p>
-                    </div>
+                    {(student.education_level === 'k-12' || student.education_level === 'kindergarten') && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                          <p className="text-sm mt-1">{student.grade_level || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                          <p className="text-sm mt-1">{student.section || 'N/A'}</p>
+                        </div>
+                      </>
+                    )}
+                    {(student.education_level === 'shs' || student.shs_track) && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                          <p className="text-sm mt-1">{student.shs_track || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
+                          <p className="text-sm mt-1">{student.grade_level || student.year_level || 'N/A'}</p>
+                        </div>
+                      </>
+                    )}
+                    {student.education_level === 'college' && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                          <p className="text-sm mt-1">{student.program || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                          <p className="text-sm mt-1">{student.year_level || 'N/A'}</p>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
@@ -369,12 +605,16 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                 <div>
                   <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Guardian Contact</label>
                   {isEditing ? (
-                    <input
-                      type="tel"
-                      value={displayData?.guardian_contact || ''}
-                      onChange={(e) => handleFieldChange('guardian_contact', e.target.value)}
-                      className="input-field mt-1"
-                    />
+                    <>
+                      <input
+                        type="tel"
+                        value={displayData?.guardian_contact || ''}
+                        onChange={(e) => handleFieldChange('guardian_contact', e.target.value)}
+                        onBlur={() => handlePhoneBlur('guardian_contact')}
+                        className="input-field mt-1"
+                      />
+                      {fieldErrors.guardian_contact && <p className="text-xs text-red-600 mt-1">{fieldErrors.guardian_contact}</p>}
+                    </>
                   ) : (
                     <p className="text-sm mt-1">{displayData?.guardian_contact || 'N/A'}</p>
                   )}
@@ -400,33 +640,114 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
           {displayData?.patient_type === 'student' && (
           <div>
             <h3 className="mb-3 text-sm font-semibold text-slate-700">Parents & Emergency Contact</h3>
-            <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
+            <div className="grid grid-cols-3 gap-4 rounded-lg bg-gray-50 p-4">
               <div>
-                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother's Name</label>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother's First Name</label>
                 {isEditing ? (
                   <input
                     type="text"
-                    value={displayData?.mother_name || ''}
-                    onChange={(e) => handleFieldChange('mother_name', e.target.value)}
+                    value={displayData?.mother_first_name || ''}
+                    onChange={(e) => handleFieldChange('mother_first_name', e.target.value)}
                     className="input-field mt-1"
+                    placeholder="First name"
                   />
                 ) : (
-                  <p className="text-sm mt-1">{displayData?.mother_name || 'N/A'}</p>
+                  <p className="text-sm mt-1">{displayData?.mother_first_name || 'N/A'}</p>
                 )}
               </div>
               <div>
-                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's Name</label>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother's Middle Name</label>
                 {isEditing ? (
                   <input
                     type="text"
-                    value={displayData?.father_name || ''}
-                    onChange={(e) => handleFieldChange('father_name', e.target.value)}
+                    value={displayData?.mother_middle_name || ''}
+                    onChange={(e) => handleFieldChange('mother_middle_name', e.target.value)}
                     className="input-field mt-1"
+                    placeholder="Middle name"
                   />
                 ) : (
-                  <p className="text-sm mt-1">{displayData?.father_name || 'N/A'}</p>
+                  <p className="text-sm mt-1">{displayData?.mother_middle_name || 'N/A'}</p>
                 )}
               </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother's Last Name</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={displayData?.mother_last_name || ''}
+                    onChange={(e) => handleFieldChange('mother_last_name', e.target.value)}
+                    className="input-field mt-1"
+                    placeholder="Last name"
+                  />
+                ) : (
+                  <p className="text-sm mt-1">{displayData?.mother_last_name || 'N/A'}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-4 rounded-lg bg-gray-50 p-4 mt-4">
+              <div>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's First Name</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={displayData?.father_first_name || ''}
+                    onChange={(e) => handleFieldChange('father_first_name', e.target.value)}
+                    className="input-field mt-1"
+                    placeholder="First name"
+                  />
+                ) : (
+                  <p className="text-sm mt-1">{displayData?.father_first_name || 'N/A'}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's Middle Name</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={displayData?.father_middle_name || ''}
+                    onChange={(e) => handleFieldChange('father_middle_name', e.target.value)}
+                    className="input-field mt-1"
+                    placeholder="Middle name"
+                  />
+                ) : (
+                  <p className="text-sm mt-1">{displayData?.father_middle_name || 'N/A'}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's Last Name</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={displayData?.father_last_name || ''}
+                    onChange={(e) => handleFieldChange('father_last_name', e.target.value)}
+                    className="input-field mt-1"
+                    placeholder="Last name"
+                  />
+                ) : (
+                  <p className="text-sm mt-1">{displayData?.father_last_name || 'N/A'}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's Suffix</label>
+                {isEditing ? (
+                  <select
+                    value={displayData?.father_suffix || ''}
+                    onChange={(e) => handleFieldChange('father_suffix', e.target.value)}
+                    className="input-field mt-1"
+                  >
+                    <option value="">None</option>
+                    <option value="Jr.">Jr.</option>
+                    <option value="Sr.">Sr.</option>
+                    <option value="II">II</option>
+                    <option value="III">III</option>
+                    <option value="IV">IV</option>
+                  </select>
+                ) : (
+                  <p className="text-sm mt-1">{displayData?.father_suffix || 'None'}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4 mt-4">
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Person to Notify</label>
                 {isEditing ? (
@@ -435,6 +756,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                     value={displayData?.person_to_notify || ''}
                     onChange={(e) => handleFieldChange('person_to_notify', e.target.value)}
                     className="input-field mt-1"
+                    placeholder="Name of emergency contact person"
                   />
                 ) : (
                   <p className="text-sm mt-1">{displayData?.person_to_notify || 'N/A'}</p>
@@ -443,29 +765,35 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
               <div>
                 <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Emergency Contact</label>
                 {isEditing ? (
-                  <input
-                    type="tel"
-                    value={displayData?.emergency_contact || ''}
-                    onChange={(e) => handleFieldChange('emergency_contact', e.target.value)}
-                    className="input-field mt-1"
-                  />
+                  <>
+                    <input
+                      type="tel"
+                      value={displayData?.emergency_contact || ''}
+                      onChange={(e) => handleFieldChange('emergency_contact', e.target.value)}
+                      onBlur={() => handlePhoneBlur('emergency_contact')}
+                      className="input-field mt-1"
+                      placeholder="e.g. 0919 123 4567"
+                    />
+                    {fieldErrors.emergency_contact && <p className="text-xs text-red-600 mt-1">{fieldErrors.emergency_contact}</p>}
+                  </>
                 ) : (
                   <p className="text-sm mt-1">{displayData?.emergency_contact || 'N/A'}</p>
                 )}
               </div>
-              <div className="col-span-2">
-                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Voucher Type</label>
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={displayData?.voucher_type || ''}
-                    onChange={(e) => handleFieldChange('voucher_type', e.target.value)}
-                    className="input-field mt-1"
-                  />
-                ) : (
-                  <p className="text-sm mt-1">{displayData?.voucher_type || 'N/A'}</p>
-                )}
-              </div>
+            </div>
+            <div className="rounded-lg bg-gray-50 p-4 mt-4">
+              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Voucher Type</label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={displayData?.voucher_type || ''}
+                  onChange={(e) => handleFieldChange('voucher_type', e.target.value)}
+                  className="input-field mt-1"
+                  placeholder="e.g., None, PWD, Senior Citizen, etc."
+                />
+              ) : (
+                <p className="text-sm mt-1">{displayData?.voucher_type || 'N/A'}</p>
+              )}
             </div>
           </div>
           )}

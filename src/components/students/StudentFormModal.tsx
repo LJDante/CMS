@@ -18,6 +18,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
     missingColumns,
     submitting,
     handleChange,
+    handlePhoneBlur,
     submitForm
   } = useStudentForm()
 
@@ -77,11 +78,12 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                 onChange={handleFormChange}
                 className="input-field"
                 inputMode="numeric"
-                pattern="[0-9]{7}"
-                maxLength={7}
-                placeholder="7 digits"
+                pattern="[0-9]{2}-[0-9]{5}"
+                maxLength={8}
+                placeholder="e.g. 22-10001"
                 required
               />
+              <p className="text-xs text-slate-500 mt-1">Format: YY-XXXXX (e.g. 22-10001)</p>
               {missingColumns.patient_id && (
                 <p className="text-xs text-yellow-700 mt-1">
                   Note: The database schema is missing <code>patient_id</code>/<code>student_id</code>, so this value will not be saved.
@@ -209,38 +211,74 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
           </div>
 
           {form.patient_type === 'student' && (
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Education level</label>
-                <select
-                  name="education_level"
-                  value={form.education_level}
-                  onChange={handleFormChange}
-                  className="input-field"
-                >
-                  <option value="kindergarten">Kindergarten</option>
-                  <option value="elementary">Elementary (Grades 1–6)</option>
-                  <option value="junior-high-school">Junior High School (Grades 7–10)</option>
-                  <option value="shs">Senior High School</option>
-                  <option value="college">College</option>
-                </select>
-              </div>
-              {(form.education_level === 'elementary' || form.education_level === 'junior-high-school' || form.education_level === 'kindergarten') && (
-                <>
+            <>
+              {form.education_level !== 'college' ? (
+                <div className="grid grid-cols-3 gap-3 mb-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Grade level</label>
-                    <input
-                      name="grade_level"
-                      value={form.grade_level}
+                    <label className="mb-1 block text-sm font-medium">Education level</label>
+                    <select
+                      name="education_level"
+                      value={form.education_level}
                       onChange={handleFormChange}
                       className="input-field"
-                      inputMode={form.education_level === 'kindergarten' ? 'text' : 'numeric'}
-                      pattern="[0-9A-Za-z]{1,2}"
-                      maxLength={2}
-                      placeholder={form.education_level === 'kindergarten' ? 'e.g. K' : form.education_level === 'elementary' ? 'e.g. 3' : 'e.g. 8'}
-                      readOnly={form.education_level === 'kindergarten'}
-                      aria-readonly={form.education_level === 'kindergarten'}
-                    />
+                    >
+                      <option value="kindergarten">Kindergarten</option>
+                      <option value="elementary">Elementary (Grades 1–6)</option>
+                      <option value="junior-high-school">Junior High School (Grades 7–10)</option>
+                      <option value="shs">Senior High School</option>
+                      <option value="college">College</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Grade level</label>
+                    {form.education_level === 'kindergarten' ? (
+                      <input
+                        name="grade_level"
+                        value={form.grade_level}
+                        onChange={handleFormChange}
+                        className="input-field"
+                        inputMode="text"
+                        pattern="[0-9A-Za-z]{1,2}"
+                        maxLength={2}
+                        placeholder="e.g. K"
+                        readOnly
+                        aria-readonly="true"
+                      />
+                    ) : form.education_level === 'shs' ? (
+                      <select
+                        name="shs_grade"
+                        value={form.shs_grade}
+                        onChange={handleFormChange}
+                        className="input-field"
+                      >
+                        <option value="">Select SHS Grade</option>
+                        <option value="11">11</option>
+                        <option value="12">12</option>
+                      </select>
+                    ) : (
+                      <select
+                        name="grade_level"
+                        value={form.grade_level}
+                        onChange={handleFormChange}
+                        className="input-field"
+                      >
+                        <option value="">Select Grade Level</option>
+                        <optgroup label="Elementary">
+                          <option value="1">1</option>
+                          <option value="2">2</option>
+                          <option value="3">3</option>
+                          <option value="4">4</option>
+                          <option value="5">5</option>
+                          <option value="6">6</option>
+                        </optgroup>
+                        <optgroup label="Junior High School">
+                          <option value="7">7</option>
+                          <option value="8">8</option>
+                          <option value="9">9</option>
+                          <option value="10">10</option>
+                        </optgroup>
+                      </select>
+                    )}
                     {errors.grade_level && <p className="text-xs text-red-600 mt-1">{errors.grade_level}</p>}
                   </div>
                   <div>
@@ -253,42 +291,44 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                       placeholder="e.g. Rizal"
                     />
                   </div>
-                </>
-              )}
-              {form.education_level === 'shs' && (
-                <>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 mb-3">
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Grade</label>
+                    <label className="mb-1 block text-sm font-medium">Education level</label>
                     <select
-                      name="shs_grade"
-                      value={form.shs_grade}
+                      name="education_level"
+                      value={form.education_level}
                       onChange={handleFormChange}
                       className="input-field"
                     >
-                      <option value="">Select SHS Grade</option>
-                      <option value="11">11</option>
-                      <option value="12">12</option>
+                      <option value="kindergarten">Kindergarten</option>
+                      <option value="elementary">Elementary (Grades 1–6)</option>
+                      <option value="junior-high-school">Junior High School (Grades 7–10)</option>
+                      <option value="shs">Senior High School</option>
+                      <option value="college">College</option>
                     </select>
-                    {errors.shs_grade && <p className="text-xs text-red-600 mt-1">{errors.shs_grade}</p>}
                   </div>
-                  {['11', '12'].includes(form.shs_grade) && (
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">SHS Track</label>
-                      <select
-                        name="shs_track"
-                        value={form.shs_track}
-                        onChange={handleFormChange}
-                        className="input-field"
-                      >
-                        <option value="">Select SHS Track</option>
-                        <option value="ABM">ABM</option>
-                        <option value="HUMSS">HUMSS</option>
-                        <option value="STEM">STEM</option>
-                      </select>
-                      {errors.shs_track && <p className="text-xs text-red-600 mt-1">{errors.shs_track}</p>}
-                    </div>
-                  )}
-                </>
+                </div>
+              )}
+              {form.education_level === 'shs' && (
+                <div className="grid grid-cols-3 gap-3 mb-3">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">SHS Track</label>
+                    <select
+                      name="shs_track"
+                      value={form.shs_track}
+                      onChange={handleFormChange}
+                      className="input-field"
+                    >
+                      <option value="">Select SHS Track</option>
+                      <option value="ABM">ABM</option>
+                      <option value="HUMSS">HUMSS</option>
+                      <option value="STEM">STEM</option>
+                    </select>
+                    {errors.shs_track && <p className="text-xs text-red-600 mt-1">{errors.shs_track}</p>}
+                  </div>
+                </div>
               )}
               {form.education_level === 'college' && (
                 <>
@@ -325,7 +365,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   </div>
                 </>
               )}
-            </div>
+            </>
           )}
 
           {form.patient_type === 'student' && (
@@ -349,7 +389,10 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   name="guardian_contact"
                   value={form.guardian_contact}
                   onChange={handleFormChange}
+                  onBlur={() => handlePhoneBlur('guardian_contact')}
                   className="input-field"
+                  maxLength={20}
+                  placeholder="e.g. 0919-123-4567"
                   required
                 />
                 {errors.guardian_contact && <p className="text-xs text-red-600 mt-1">{errors.guardian_contact}</p>}
@@ -374,33 +417,77 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
           {form.patient_type === 'student' && (
           <div>
             <h3 className="mb-2 text-sm font-semibold text-slate-700">Parents & Emergency Contact</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="mb-1 block text-sm font-medium">Mother's name</label>
+                <label className="mb-1 block text-sm font-medium">Mother's First Name</label>
                 <input
-                  name="mother_name"
-                  value={form.mother_name}
+                  name="mother_first_name"
+                  value={form.mother_first_name}
                   onChange={handleFormChange}
                   onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
                   className="input-field"
-                  placeholder="Full name"
                 />
-                {errors.mother_name && <p className="text-xs text-red-600 mt-1">{errors.mother_name}</p>}
+                {errors.mother_first_name && <p className="text-xs text-red-600 mt-1">{errors.mother_first_name}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Father's name</label>
+                <label className="mb-1 block text-sm font-medium">Mother's Middle Name</label>
                 <input
-                  name="father_name"
-                  value={form.father_name}
+                  name="mother_middle_name"
+                  value={form.mother_middle_name}
                   onChange={handleFormChange}
                   onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
                   className="input-field"
-                  placeholder="Full name"
                 />
-                {errors.father_name && <p className="text-xs text-red-600 mt-1">{errors.father_name}</p>}
+                {errors.mother_middle_name && <p className="text-xs text-red-600 mt-1">{errors.mother_middle_name}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Father's suffix</label>
+                <label className="mb-1 block text-sm font-medium">Mother's Last Name</label>
+                <input
+                  name="mother_last_name"
+                  value={form.mother_last_name}
+                  onChange={handleFormChange}
+                  onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                  className="input-field"
+                />
+                {errors.mother_last_name && <p className="text-xs text-red-600 mt-1">{errors.mother_last_name}</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Father's First Name</label>
+                <input
+                  name="father_first_name"
+                  value={form.father_first_name}
+                  onChange={handleFormChange}
+                  onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                  className="input-field"
+                />
+                {errors.father_first_name && <p className="text-xs text-red-600 mt-1">{errors.father_first_name}</p>}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Father's Middle Name</label>
+                <input
+                  name="father_middle_name"
+                  value={form.father_middle_name}
+                  onChange={handleFormChange}
+                  onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                  className="input-field"
+                />
+                {errors.father_middle_name && <p className="text-xs text-red-600 mt-1">{errors.father_middle_name}</p>}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Father's Last Name</label>
+                <input
+                  name="father_last_name"
+                  value={form.father_last_name}
+                  onChange={handleFormChange}
+                  onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                  className="input-field"
+                />
+                {errors.father_last_name && <p className="text-xs text-red-600 mt-1">{errors.father_last_name}</p>}
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Father's Suffix</label>
                 <select
                   name="father_suffix"
                   value={form.father_suffix}
@@ -415,6 +502,8 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   <option value="IV">IV</option>
                 </select>
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium">Person to notify</label>
                 <input
@@ -432,10 +521,11 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   name="emergency_contact"
                   value={form.emergency_contact}
                   onChange={handleFormChange}
+                  onBlur={() => handlePhoneBlur('emergency_contact')}
                   className="input-field"
                   inputMode="numeric"
-                  maxLength={11}
-                  placeholder="11 digits"
+                  maxLength={20}
+                  placeholder="e.g. 0919 123 4567"
                 />
                 {errors.emergency_contact && <p className="text-xs text-red-600 mt-1">{errors.emergency_contact}</p>}
               </div>

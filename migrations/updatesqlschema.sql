@@ -146,8 +146,6 @@ CREATE TABLE public.patients (
   enrollment_status text DEFAULT 'active'::text CHECK (enrollment_status = ANY (ARRAY['active'::text, 'inactive'::text])),
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   adviser text,
-  mother_name text,
-  father_name text,
   person_to_notify text,
   emergency_contact character varying CHECK (emergency_contact::text ~ '^[0-9]{11}$'::text),
   voucher_type text,
@@ -159,8 +157,14 @@ CREATE TABLE public.patients (
   shs_track text CHECK (shs_track = ANY (ARRAY['ABM'::text, 'HUMSS'::text, 'STEM'::text])),
   allergies text,
   diagnosed_diseases text,
-  suffix text CHECK (suffix = ANY (ARRAY['Jr.'::text, 'Sr.'::text, 'II'::text, 'III'::text, 'IV'::text])),
+  suffix text,
   father_suffix text CHECK (father_suffix = ANY (ARRAY['Jr.'::text, 'Sr.'::text, 'II'::text, 'III'::text, 'IV'::text])),
+  mother_first_name text,
+  mother_middle_name text,
+  mother_last_name text,
+  father_first_name text,
+  father_middle_name text,
+  father_last_name text,
   CONSTRAINT patients_pkey PRIMARY KEY (id)
 );
 CREATE TABLE public.physical_examinations (

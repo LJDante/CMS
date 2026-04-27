@@ -1,6 +1,7 @@
-import { Search, Eye } from 'lucide-react'
+import { Search, Eye, Edit2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import toast from 'react-hot-toast'
 import type { Student } from '../../types'
 import { EDUCATION_TYPE_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../../constants'
 import { getGradeFilterOptions, getGradeLevelQueryParams, isK12EducationLevel, matchesGradeFilter } from '../../utils/helpers'
@@ -10,13 +11,14 @@ interface StudentListProps {
   search: string
   onSearchChange: (search: string) => void
   onViewDetails: (student: Student) => void
+  onStudentsReload?: () => void
 }
 
 type EducationType = 'all' | 'k12' | 'college' | 'personnel'
 type GradeLevel = string
 type GuardianFilter = 'all' | 'has-contact' | 'no-contact'
 
-export function StudentList({ students, search, onSearchChange, onViewDetails }: StudentListProps) {
+export function StudentList({ students, search, onSearchChange, onViewDetails, onStudentsReload }: StudentListProps) {
   const [educationType, setEducationType] = useState<EducationType>('all')
   const [gradeLevel, setGradeLevel] = useState<GradeLevel>('all')
   const [section, setSection] = useState('')
@@ -24,6 +26,9 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
   const [guardianFilter, setGuardianFilter] = useState<GuardianFilter>('all')
   const [availableSections, setAvailableSections] = useState<string[]>([])
   const [loadingSections, setLoadingSections] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showSexModal, setShowSexModal] = useState(false)
+  const [sexUpdateLoading, setSexUpdateLoading] = useState(false)
 
   // Fetch available sections when grade level changes
   useEffect(() => {
@@ -136,6 +141,10 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
   })
 
   const levelDisplay = (s: Student) => {
+    const isShs = s.education_level === 'shs' || Boolean(s.shs_track)
+    if (isShs && s.shs_track) {
+      return `${s.shs_track}-${s.grade_level || s.year_level || 'N/A'}`
+    }
     if (s.education_level === 'shs' && s.program && (s.grade_level || s.year_level)) {
       return `${s.program}-${s.grade_level || s.year_level}`
     }
@@ -145,10 +154,64 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
     return s.grade_level ?? '—'
   }
 
+  const toggleSelection = (studentId: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(studentId)) {
+      next.delete(studentId)
+    } else {
+      next.add(studentId)
+    }
+    setSelectedIds(next)
+  }
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filtered.map((s) => s.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
+  }
+
+  const updateSelectedSex = async (sex: 'M' | 'F') => {
+    if (selectedIds.size === 0) return
+    setSexUpdateLoading(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const { error } = await supabase
+        .from('patients')
+        .update({ sex })
+        .in('id', ids)
+
+      if (error) {
+        console.error('Failed to update patient sex', error)
+        toast.error('Failed to update patient sex')
+        return
+      }
+
+      if (onStudentsReload) {
+        try {
+          await onStudentsReload()
+        } catch (reloadError) {
+          console.error('Failed to reload students after sex update', reloadError)
+        }
+      }
+
+      toast.success(`Sex updated for ${ids.length} selected patients successfully`)
+      clearSelection()
+      setShowSexModal(false)
+      return
+    } catch (error) {
+      console.error('Failed to update patient sex', error)
+      toast.error('Failed to update patient sex')
+    } finally {
+      setSexUpdateLoading(false)
+    }
+  }
+
   return (
     <>
       {/* Search Bar */}
-      <div className="mt-6 flex flex-wrap gap-4">
+      <div className="mt-6 flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -158,6 +221,15 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
+        {selectedIds.size > 0 && (
+          <button
+            onClick={() => setShowSexModal(true)}
+            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Edit2 className="h-4 w-4" />
+            Edit Sex ({selectedIds.size})
+          </button>
+        )}
       </div>
 
       {/* Cascading Filter Dropdowns */}
@@ -259,6 +331,14 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 bg-gray-50">
             <tr>
+              <th className="px-4 py-3 font-medium">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === filtered.length && filtered.length > 0}
+                  onChange={(e) => e.currentTarget.checked ? selectAll() : clearSelection()}
+                  className="rounded border-slate-300"
+                />
+              </th>
               <th className="px-4 py-3 font-medium">ID</th>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -272,7 +352,18 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
                 s.middle_name ? ` ${s.middle_name}` : ''
               }`
               return (
-                <tr key={s.id} className="border-b border-slate-100 hover:bg-gray-50">
+                <tr
+                  key={s.id}
+                  className={`border-b border-slate-100 ${selectedIds.has(s.id) ? 'bg-sky-50' : 'hover:bg-gray-50'}`}
+                >
+                  <td className="px-4 py-3 text-slate-900">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(s.id)}
+                      onChange={() => toggleSelection(s.id)}
+                      className="rounded border-slate-300"
+                    />
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{s.patient_id}</td>
                   <td className="px-4 py-3">{fullName}</td>
                   <td className="px-4 py-3 capitalize">{s.patient_type}</td>
@@ -296,6 +387,36 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
           <p className="py-10 text-center text-slate-500">No patients found.</p>
         )}
       </div>
+
+      {showSexModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-slate-900">Change sex for {selectedIds.size} selected patient{selectedIds.size !== 1 ? 's' : ''} to:</h2>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                onClick={() => void updateSelectedSex('M')}
+                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-blue-400"
+                disabled={sexUpdateLoading}
+              >
+                Male
+              </button>
+              <button
+                onClick={() => void updateSelectedSex('F')}
+                className="w-full rounded bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700 transition-colors disabled:cursor-not-allowed disabled:bg-pink-400"
+                disabled={sexUpdateLoading}
+              >
+                Female
+              </button>
+            </div>
+            <button
+              onClick={() => setShowSexModal(false)}
+              className="mt-4 w-full rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

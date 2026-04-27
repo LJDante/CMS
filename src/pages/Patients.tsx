@@ -9,6 +9,26 @@ import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 import * as ExcelJS from 'exceljs'
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  } catch {
+    return 'N/A'
+  }
+}
+
+const formatParentFullName = (last?: string | null, first?: string | null, middle?: string | null) => {
+  const names = [last, first, middle].filter(Boolean).map((part) => part?.trim())
+  return names.length ? names.join(' ') : 'N/A'
+}
+
 import { EDUCATION_TYPE_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../constants'
 import { getGradeFilterOptions, getGradeLevelQueryParams, isK12EducationLevel, matchesGradeFilter } from '../utils/helpers'
 import philippinesData from '../constants/philippines.json'
@@ -32,7 +52,16 @@ export default function Patients() {
   // Edit patient info states
   const [isEditingPatient, setIsEditingPatient] = useState(false)
   const [isSavingPatient, setIsSavingPatient] = useState(false)
-  type EditablePatient = Omit<Student, 'education_level'> & { education_level?: EducationLevel; shs_track?: string }
+  type EditablePatient = Omit<Student, 'education_level'> & {
+    education_level?: EducationLevel
+    shs_track?: string
+    mother_last_name?: string
+    mother_first_name?: string
+    mother_middle_name?: string
+    father_last_name?: string
+    father_first_name?: string
+    father_middle_name?: string
+  }
   const [editedPatient, setEditedPatient] = useState<EditablePatient | null>(null)
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   const [selectedProvince, setSelectedProvince] = useState('')
@@ -42,6 +71,8 @@ export default function Patients() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [bulkStatus, setBulkStatus] = useState<'active' | 'inactive'>('inactive')
+  const [showSexModal, setShowSexModal] = useState(false)
+  const [sexUpdateLoading, setSexUpdateLoading] = useState(false)
 
   // Filter states
   const [educationType, setEducationType] = useState<EducationType>('all')
@@ -55,25 +86,26 @@ export default function Patients() {
   // Check if user can edit patient info (staff and doctors)
   const canEditPatientInfo = profile?.role === 'clinic_staff' || profile?.role === 'clinic_doctor' || profile?.role === 'clinic_admin'
 
+  const loadPatients = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*')
+      .order('last_name')
+    
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to load patients', error)
+      setPatients([])
+    } else {
+      setPatients((data ?? []) as Student[])
+    }
+    setLoading(false)
+  }
+
   // Load all patients (both students and personnel)
   useEffect(() => {
-    const load = async () => {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('last_name')
-      
-      if (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load patients', error)
-        setPatients([])
-      } else {
-        setPatients((data ?? []) as Student[])
-      }
-      setLoading(false)
-    }
-    void load()
+    void loadPatients()
   }, [])
 
   // Fetch available sections when grade level changes
@@ -253,11 +285,23 @@ export default function Patients() {
     setIsEditingPatient(false)
   }
 
-  const handlePatientFieldChange = (field: keyof Student | 'shs_track', value: any) => {
+  const handlePatientFieldChange = (field: keyof EditablePatient, value: any) => {
     if (field === 'contact_number' || field === 'guardian_contact' || field === 'emergency_contact') {
-      value = value.replace(/\D/g, '').slice(0, 11)
+      value = String(value).slice(0, 20)
     }
-    if (field === 'first_name' || field === 'middle_name' || field === 'last_name' || field === 'guardian_name' || field === 'mother_name' || field === 'father_name' || field === 'person_to_notify') {
+    if (
+      field === 'first_name' ||
+      field === 'middle_name' ||
+      field === 'last_name' ||
+      field === 'guardian_name' ||
+      field === 'mother_first_name' ||
+      field === 'mother_middle_name' ||
+      field === 'mother_last_name' ||
+      field === 'father_first_name' ||
+      field === 'father_middle_name' ||
+      field === 'father_last_name' ||
+      field === 'person_to_notify'
+    ) {
       value = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ'. -]/g, '')
     }
     if (field === 'grade_level') {
@@ -290,6 +334,45 @@ export default function Patients() {
     })
   }
 
+  const normalizePhone = (val: string | null | undefined) => {
+    if (!val) return null
+    let digits = String(val).trim().replace(/\D/g, '')
+
+    if (digits.startsWith('63') && digits.length === 12) {
+      digits = '0' + digits.slice(2)
+    }
+
+    if (digits.length === 10 && digits.startsWith('9')) {
+      digits = '0' + digits
+    }
+
+    if (digits.length === 11 && digits.startsWith('0')) {
+      return digits
+    }
+
+    console.log(`Unparseable phone number: ${val} → digits: ${digits}`)
+    return null
+  }
+
+  const handlePatientPhoneBlur = (field: 'contact_number' | 'guardian_contact' | 'emergency_contact') => {
+    if (!editedPatient) return
+    const rawValue = String(editedPatient[field] || '')
+    const normalized = normalizePhone(rawValue)
+
+    if (normalized) {
+      setEditedPatient((prev) => prev ? ({ ...prev, [field]: normalized }) : prev)
+      setEditErrors((prev) => {
+        const { [field]: _removed, ...rest } = prev
+        return rest
+      })
+      return
+    }
+
+    if (rawValue.trim()) {
+      setEditErrors((prev) => ({ ...prev, [field]: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+    }
+  }
+
   const validateEditedPatient = () => {
     const errors: Record<string, string> = {}
     if (!editedPatient) return errors
@@ -308,7 +391,7 @@ export default function Patients() {
       errors.last_name = 'Last name is required'
     }
 
-    if (editedPatient.contact_number && !/^[0-9]{11}$/.test(editedPatient.contact_number)) {
+    if (editedPatient.contact_number && !normalizePhone(editedPatient.contact_number)) {
       errors.contact_number = 'Contact number must be exactly 11 digits'
     }
     if (!editedPatient.contact_number) {
@@ -316,7 +399,7 @@ export default function Patients() {
     }
 
     if (editedPatient.patient_type === 'student') {
-      if (editedPatient.guardian_contact && !/^[0-9]{11}$/.test(editedPatient.guardian_contact)) {
+      if (editedPatient.guardian_contact && !normalizePhone(editedPatient.guardian_contact)) {
         errors.guardian_contact = 'Guardian contact must be exactly 11 digits'
       }
       if (!editedPatient.guardian_contact) {
@@ -331,7 +414,7 @@ export default function Patients() {
       }
     }
 
-    if (editedPatient.emergency_contact && !/^[0-9]{11}$/.test(editedPatient.emergency_contact)) {
+    if (editedPatient.emergency_contact && !normalizePhone(editedPatient.emergency_contact)) {
       errors.emergency_contact = 'Emergency contact must be exactly 11 digits'
     }
     if (editedPatient.emergency_contact && !editedPatient.person_to_notify) {
@@ -342,11 +425,23 @@ export default function Patients() {
       errors.person_to_notify = 'Emergency contact name must contain letters only'
     }
 
-    if (editedPatient.mother_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.mother_name)) {
-      errors.mother_name = 'Name must contain letters only'
+    if (editedPatient.mother_first_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.mother_first_name)) {
+      errors.mother_first_name = 'Name must contain letters only'
     }
-    if (editedPatient.father_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.father_name)) {
-      errors.father_name = 'Name must contain letters only'
+    if (editedPatient.mother_middle_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.mother_middle_name)) {
+      errors.mother_middle_name = 'Name must contain letters only'
+    }
+    if (editedPatient.mother_last_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.mother_last_name)) {
+      errors.mother_last_name = 'Name must contain letters only'
+    }
+    if (editedPatient.father_first_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.father_first_name)) {
+      errors.father_first_name = 'Name must contain letters only'
+    }
+    if (editedPatient.father_middle_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.father_middle_name)) {
+      errors.father_middle_name = 'Name must contain letters only'
+    }
+    if (editedPatient.father_last_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(editedPatient.father_last_name)) {
+      errors.father_last_name = 'Name must contain letters only'
     }
 
     if (editedPatient.patient_type === 'student') {
@@ -389,6 +484,31 @@ export default function Patients() {
 
     setIsSavingPatient(true)
     try {
+      const normalizedContact = normalizePhone(editedPatient.contact_number)
+      const normalizedGuardian = normalizePhone(editedPatient.guardian_contact)
+      const normalizedEmergency = normalizePhone(editedPatient.emergency_contact)
+
+      if (editedPatient.contact_number && !normalizedContact) {
+        setEditErrors((prev) => ({ ...prev, contact_number: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        setIsSavingPatient(false)
+        return
+      }
+
+      if (editedPatient.guardian_contact && !normalizedGuardian) {
+        setEditErrors((prev) => ({ ...prev, guardian_contact: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        setIsSavingPatient(false)
+        return
+      }
+
+      if (editedPatient.emergency_contact && !normalizedEmergency) {
+        setEditErrors((prev) => ({ ...prev, emergency_contact: 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)' }))
+        toast.error('Please fix invalid phone numbers before saving')
+        setIsSavingPatient(false)
+        return
+      }
+
       const updateData: Record<string, unknown> = {
         first_name: editedPatient.first_name,
         middle_name: editedPatient.middle_name,
@@ -396,16 +516,20 @@ export default function Patients() {
         sex: editedPatient.sex === 'M' ? 'M' : editedPatient.sex === 'F' ? 'F' : null,
         age: editedPatient.age,
         date_of_birth: editedPatient.date_of_birth,
-        contact_number: editedPatient.contact_number,
+        contact_number: normalizedContact,
         guardian_name: editedPatient.guardian_name,
-        guardian_contact: editedPatient.guardian_contact,
+        guardian_contact: normalizedGuardian,
         guardian_email: editedPatient.guardian_email,
-        mother_name: editedPatient.mother_name,
-        father_name: editedPatient.father_name,
+        mother_last_name: editedPatient.mother_last_name,
+        mother_first_name: editedPatient.mother_first_name,
+        mother_middle_name: editedPatient.mother_middle_name,
+        father_last_name: editedPatient.father_last_name,
+        father_first_name: editedPatient.father_first_name,
+        father_middle_name: editedPatient.father_middle_name,
         suffix: editedPatient.sex === 'M' ? editedPatient.suffix : null,
         father_suffix: editedPatient.father_suffix,
         person_to_notify: editedPatient.person_to_notify,
-        emergency_contact: editedPatient.emergency_contact,
+        emergency_contact: normalizedEmergency,
         voucher_type: editedPatient.voucher_type,
         allergies: editedPatient.allergies,
         diagnosed_diseases: editedPatient.diagnosed_diseases,
@@ -422,7 +546,7 @@ export default function Patients() {
 
         updateData.education_level = mappedEducationLevel
         updateData.grade_level = ['k-12', 'kindergarten', 'shs'].includes(mappedEducationLevel || '') ? editedPatient.grade_level : null
-        updateData.section = ['k-12', 'kindergarten'].includes(mappedEducationLevel || '') ? editedPatient.section : null
+        updateData.section = ['k-12', 'kindergarten', 'shs'].includes(mappedEducationLevel || '') ? editedPatient.section : null
         updateData.shs_track = mappedEducationLevel === 'shs' ? editedPatient.shs_track : null
         updateData.year_level = mappedEducationLevel === 'college' ? editedPatient.year_level : null
         updateData.program = mappedEducationLevel === 'college' ? editedPatient.program : null
@@ -547,6 +671,35 @@ export default function Patients() {
     return value
   }
 
+  const updateSelectedPatientsSex = async (sex: 'M' | 'F') => {
+    if (selectedIds.size === 0) return
+    setSexUpdateLoading(true)
+    try {
+      const ids = Array.from(selectedIds)
+      const { error } = await supabase
+        .from('patients')
+        .update({ sex })
+        .in('id', ids)
+
+      if (error) {
+        console.error('Failed to update patient sex', error)
+        toast.error('Failed to update patient sex')
+        return
+      }
+
+      await loadPatients()
+      toast.success(`Sex updated for ${ids.length} patients successfully`)
+      setSelectedIds(new Set())
+      setShowSexModal(false)
+      return
+    } catch (error) {
+      console.error('Failed to update patient sex', error)
+      toast.error('Failed to update patient sex')
+    } finally {
+      setSexUpdateLoading(false)
+    }
+  }
+
   const exportToExcel = () => {
     let dataToExport = filtered
     let fileName = 'All_Patients_Export.xlsx'
@@ -578,8 +731,8 @@ export default function Patients() {
         p.address_field?.trim() || 'N/A',
         p.date_of_birth ? format(new Date(p.date_of_birth), 'MMMM dd, yyyy') : 'N/A',
         p.contact_number || 'N/A',
-        p.mother_name || 'N/A',
-        p.father_name || 'N/A',
+        formatParentFullName(p.mother_last_name, p.mother_first_name, p.mother_middle_name),
+        formatParentFullName(p.father_last_name, p.father_first_name, p.father_middle_name),
         p.guardian_name || 'N/A',
         p.person_to_notify || 'N/A',
         p.emergency_contact || 'N/A',
@@ -652,8 +805,8 @@ export default function Patients() {
           p.address_field?.trim() || 'N/A',
           p.date_of_birth ? format(new Date(p.date_of_birth), 'MMMM dd, yyyy') : 'N/A',
           p.contact_number || 'N/A',
-          p.mother_name || 'N/A',
-          p.father_name || 'N/A',
+          formatParentFullName(p.mother_last_name, p.mother_first_name, p.mother_middle_name),
+          formatParentFullName(p.father_last_name, p.father_first_name, p.father_middle_name),
           p.guardian_name || 'N/A',
           p.person_to_notify || 'N/A',
           p.emergency_contact || 'N/A',
@@ -785,8 +938,8 @@ export default function Patients() {
           'Guardian Name': p.guardian_name || 'N/A',
           'Guardian Contact': p.guardian_contact || 'N/A',
           'Guardian Email': p.guardian_email || 'N/A',
-          'Mother\'s Name': p.mother_name || 'N/A',
-          'Father\'s Name': p.father_name || 'N/A',
+          'Mother\'s Name': formatParentFullName(p.mother_last_name, p.mother_first_name, p.mother_middle_name),
+          'Father\'s Name': formatParentFullName(p.father_last_name, p.father_first_name, p.father_middle_name),
           'Person to Notify': p.person_to_notify || 'N/A',
           'Emergency Contact': p.emergency_contact || 'N/A',
           'Voucher Type': p.voucher_type || 'N/A',
@@ -890,7 +1043,7 @@ export default function Patients() {
           </button>
         </div>
       </div>
-      <div className="mt-6 flex flex-wrap gap-4">
+      <div className="mt-6 flex flex-wrap gap-4 items-center">
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -900,6 +1053,15 @@ export default function Patients() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {selectedIds.size > 0 && (
+          <button
+            onClick={() => setShowSexModal(true)}
+            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            <Edit2 className="h-4 w-4" />
+            Edit Sex ({selectedIds.size})
+          </button>
+        )}
       </div>
 
       {/* Cascading Filter Dropdowns */}
@@ -1018,13 +1180,52 @@ export default function Patients() {
               Clear
             </button>
           </div>
-          <button
-            onClick={() => setShowBulkActions(true)}
-            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-          >
-            <Edit2 className="h-4 w-4" />
-            Change Enrollment Status
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowSexModal(true)}
+              className="inline-flex items-center gap-2 rounded bg-pink-600 px-4 py-2 text-sm font-medium text-white hover:bg-pink-700 transition-colors"
+            >
+              <Edit2 className="h-4 w-4" />
+              Edit Sex ({selectedIds.size})
+            </button>
+            <button
+              onClick={() => setShowBulkActions(true)}
+              className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            >
+              <Edit2 className="h-4 w-4" />
+              Change Enrollment Status
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSexModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-semibold text-slate-900">Change sex for {selectedIds.size} selected patient{selectedIds.size !== 1 ? 's' : ''} to:</h2>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                onClick={() => void updateSelectedPatientsSex('M')}
+                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-blue-400"
+                disabled={sexUpdateLoading}
+              >
+                Male
+              </button>
+              <button
+                onClick={() => void updateSelectedPatientsSex('F')}
+                className="w-full rounded bg-pink-600 px-4 py-2 text-sm font-semibold text-white hover:bg-pink-700 transition-colors disabled:cursor-not-allowed disabled:bg-pink-400"
+                disabled={sexUpdateLoading}
+              >
+                Female
+              </button>
+            </div>
+            <button
+              onClick={() => setShowSexModal(false)}
+              className="mt-4 w-full rounded border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -1060,7 +1261,10 @@ export default function Patients() {
                   p.middle_name ? ` ${p.middle_name}` : ''
                 }`
                 return (
-                  <tr key={p.id} className="border-b border-slate-100 hover:bg-gray-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                  <tr
+                  key={p.id}
+                  className={`border-b border-slate-100 dark:border-slate-700 ${selectedIds.has(p.id) ? 'bg-sky-50 dark:bg-slate-800' : 'hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                >
                     <td className="px-4 py-3 text-slate-900 dark:text-slate-100">
                       <input
                         type="checkbox"
@@ -1240,22 +1444,19 @@ export default function Patients() {
                   <div>
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Suffix</label>
                     {isEditingPatient ? (
-                      displayPatient?.sex === 'M' ? (
-                        <select
-                          value={displayPatient?.suffix || ''}
-                          onChange={(e) => handlePatientFieldChange('suffix', e.target.value)}
-                          className="input-field mt-1"
-                        >
-                          <option value="">None</option>
-                          <option value="Jr.">Jr.</option>
-                          <option value="Sr.">Sr.</option>
-                          <option value="II">II</option>
-                          <option value="III">III</option>
-                          <option value="IV">IV</option>
-                        </select>
-                      ) : (
-                        <p className="text-sm mt-1">N/A</p>
-                      )
+                      <select
+                        value={displayPatient?.suffix || ''}
+                        onChange={(e) => handlePatientFieldChange('suffix', e.target.value)}
+                        className="input-field mt-1"
+                        disabled={displayPatient?.sex !== 'M'}
+                      >
+                        <option value="">None</option>
+                        <option value="Jr.">Jr.</option>
+                        <option value="Sr.">Sr.</option>
+                        <option value="II">II</option>
+                        <option value="III">III</option>
+                        <option value="IV">IV</option>
+                      </select>
                     ) : (
                       <p className="text-sm mt-1">{displayPatient?.suffix || 'N/A'}</p>
                     )}
@@ -1285,7 +1486,7 @@ export default function Patients() {
                         className="input-field mt-1"
                       />
                     ) : (
-                      <p className="text-sm mt-1">{displayPatient?.date_of_birth || 'N/A'}</p>
+                      <p className="text-sm mt-1">{formatDate(displayPatient?.date_of_birth || null)}</p>
                     )}
                   </div>
                   <div>
@@ -1296,6 +1497,7 @@ export default function Patients() {
                           type="tel"
                           value={displayPatient?.contact_number || ''}
                           onChange={(e) => handlePatientFieldChange('contact_number', e.target.value)}
+                          onBlur={() => handlePatientPhoneBlur('contact_number')}
                           className="input-field mt-1"
                         />
                         {editErrors.contact_number && <p className="text-xs text-red-600 mt-1">{editErrors.contact_number}</p>}
@@ -1308,12 +1510,11 @@ export default function Patients() {
               </div>
 
               {/* Education Information (for students) */}
-              {selectedPatient.patient_type === 'student' && (
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Education Information</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                    {isEditingPatient ? (
-                      <>
+              {displayPatient?.patient_type === 'student' && (
+                <div className="rounded-lg bg-gray-50 p-4">
+                  {isEditingPatient ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-4 mb-4">
                         <div>
                           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
                           <select
@@ -1328,7 +1529,7 @@ export default function Patients() {
                             <option value="college">College</option>
                           </select>
                         </div>
-                        {(displayEducationLevel === 'elementary' || displayEducationLevel === 'junior-high-school' || displayEducationLevel === 'kindergarten') && (
+                        {displayEducationLevel !== 'college' ? (
                           <>
                             <div>
                               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
@@ -1340,6 +1541,17 @@ export default function Patients() {
                                   aria-readonly="true"
                                   className="input-field mt-1"
                                 />
+                              ) : displayEducationLevel === 'shs' ? (
+                                <select
+                                  name="grade_level"
+                                  value={displayPatient?.grade_level || ''}
+                                  onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
+                                  className="input-field mt-1"
+                                >
+                                  <option value="">Select SHS Grade</option>
+                                  <option value="11">11</option>
+                                  <option value="12">12</option>
+                                </select>
                               ) : (
                                 <select
                                   name="grade_level"
@@ -1377,119 +1589,112 @@ export default function Patients() {
                               />
                             </div>
                           </>
-                        )}
-                        {displayEducationLevel === 'shs' && (
+                        ) : (
                           <>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
-                              <select
-                                name="grade_level"
-                                value={displayPatient?.grade_level || ''}
-                                onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
-                                className="input-field mt-1"
-                              >
-                                <option value="">Select SHS Grade</option>
-                                <option value="11">11</option>
-                                <option value="12">12</option>
-                              </select>
-                              {editErrors.grade_level && <p className="text-xs text-red-600 mt-1">{editErrors.grade_level}</p>}
-                            </div>
-                            {['11', '12'].includes(displayPatient?.grade_level || '') && (
-                              <div>
-                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                                <select
-                                  name="shs_track"
-                                  value={displayEditablePatient?.shs_track || ''}
-                                  onChange={(e) => handlePatientFieldChange('shs_track', e.target.value)}
-                                  className="input-field mt-1"
-                                >
-                                  <option value="">Select SHS Track</option>
-                                  <option value="ABM">ABM</option>
-                                  <option value="HUMSS">HUMSS</option>
-                                  <option value="STEM">STEM</option>
-                                </select>
-                                {editErrors.shs_track && <p className="text-xs text-red-600 mt-1">{editErrors.shs_track}</p>}
-                              </div>
-                            )}
+                            <div />
+                            <div />
                           </>
                         )}
-                        {displayEducationLevel === 'college' && (
-                          <>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Program</label>
-                              <input
-                                type="text"
-                                value={displayPatient?.program || ''}
-                                onChange={(e) => handlePatientFieldChange('program', e.target.value)}
-                                className="input-field mt-1"
-                                placeholder="e.g. BSCS"
-                              />
-                              {editErrors.program && <p className="text-xs text-red-600 mt-1">{editErrors.program}</p>}
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
-                              <select
-                                name="year_level"
-                                value={displayPatient?.year_level || ''}
-                                onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
-                                className="input-field mt-1"
-                              >
-                                <option value="">Select Year Level</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                              </select>
-                              {editErrors.year_level && <p className="text-xs text-red-600 mt-1">{editErrors.year_level}</p>}
-                            </div>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
-                          <p className="text-sm mt-1 capitalize">{selectedPatient.education_level || 'N/A'}</p>
+                      </div>
+                      {displayEducationLevel === 'shs' && (
+                        <div className="grid grid-cols-3 gap-4 mb-4">
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                            <select
+                              name="shs_track"
+                              value={displayEditablePatient?.shs_track || ''}
+                              onChange={(e) => handlePatientFieldChange('shs_track', e.target.value)}
+                              className="input-field mt-1"
+                            >
+                              <option value="">Select SHS Track</option>
+                              <option value="ABM">ABM</option>
+                              <option value="HUMSS">HUMSS</option>
+                              <option value="STEM">STEM</option>
+                            </select>
+                            {editErrors.shs_track && <p className="text-xs text-red-600 mt-1">{editErrors.shs_track}</p>}
+                          </div>
                         </div>
-                        {(selectedPatient.education_level === 'k-12' || selectedPatient.education_level === 'kindergarten') && (
-                          <>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
-                              <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
-                              <p className="text-sm mt-1">{selectedPatient.section || 'N/A'}</p>
-                            </div>
-                          </>
-                        )}
-                        {selectedPatient.education_level === 'shs' && (
-                          <>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                              <p className="text-sm mt-1">{selectedPatient.shs_track || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                              <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
-                            </div>
-                          </>
-                        )}
-                        {selectedPatient.education_level === 'college' && (
-                          <>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
-                              <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
-                              <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </div>
+                      )}
+                      {displayEducationLevel === 'college' && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Program</label>
+                            <input
+                              type="text"
+                              value={displayPatient?.program || ''}
+                              onChange={(e) => handlePatientFieldChange('program', e.target.value)}
+                              className="input-field mt-1"
+                              placeholder="e.g. BSCS"
+                            />
+                            {editErrors.program && <p className="text-xs text-red-600 mt-1">{editErrors.program}</p>}
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                            <select
+                              name="year_level"
+                              value={displayPatient?.year_level || ''}
+                              onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
+                              className="input-field mt-1"
+                            >
+                              <option value="">Select Year Level</option>
+                              <option value="1">1</option>
+                              <option value="2">2</option>
+                              <option value="3">3</option>
+                              <option value="4">4</option>
+                            </select>
+                            {editErrors.year_level && <p className="text-xs text-red-600 mt-1">{editErrors.year_level}</p>}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Education Level</label>
+                        <p className="text-sm mt-1 capitalize">{selectedPatient.education_level || 'N/A'}</p>
+                      </div>
+                      {(selectedPatient.education_level === 'k-12' || selectedPatient.education_level === 'kindergarten') && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                            <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                            <p className="text-sm mt-1">{selectedPatient.section || 'N/A'}</p>
+                          </div>
+                        </>
+                      )}
+                      {(selectedPatient.education_level === 'shs' || selectedPatient.shs_track) && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                            <p className="text-sm mt-1">{selectedPatient.shs_track || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
+                            <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Section</label>
+                            <p className="text-sm mt-1">{selectedPatient.section || 'N/A'}</p>
+                          </div>
+                        </>
+                      )}
+                      {selectedPatient.education_level === 'college' && (
+                        <>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                            <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
+                            <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 
@@ -1522,6 +1727,7 @@ export default function Patients() {
                             type="tel"
                             value={displayPatient?.guardian_contact || ''}
                             onChange={(e) => handlePatientFieldChange('guardian_contact', e.target.value)}
+                            onBlur={() => handlePatientPhoneBlur('guardian_contact')}
                             className="input-field mt-1"
                           />
                           {editErrors.guardian_contact && <p className="text-xs text-red-600 mt-1">{editErrors.guardian_contact}</p>}
@@ -1554,95 +1760,173 @@ export default function Patients() {
               {displayPatient?.patient_type === 'student' && (
                 <div>
                   <h3 className="mb-3 text-sm font-semibold text-slate-700">Parents & Emergency Contact</h3>
-                  <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother's Name</label>
-                      {isEditingPatient ? (
-                        <>
-                          <input
-                            type="text"
-                            value={displayPatient?.mother_name || ''}
-                            onChange={(e) => handlePatientFieldChange('mother_name', e.target.value)}
-                            onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                  <div className="rounded-lg bg-gray-50 p-4">
+                    {/* Mother - separate row */}
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother First Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.mother_first_name || ''}
+                              onChange={(e) => handlePatientFieldChange('mother_first_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.mother_first_name && <p className="text-xs text-red-600 mt-1">{editErrors.mother_first_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.mother_first_name || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother Middle Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.mother_middle_name || ''}
+                              onChange={(e) => handlePatientFieldChange('mother_middle_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.mother_middle_name && <p className="text-xs text-red-600 mt-1">{editErrors.mother_middle_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.mother_middle_name || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Mother Last Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.mother_last_name || ''}
+                              onChange={(e) => handlePatientFieldChange('mother_last_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.mother_last_name && <p className="text-xs text-red-600 mt-1">{editErrors.mother_last_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.mother_last_name || 'N/A'}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Father - separate row */}
+                    <div className="grid grid-cols-4 gap-4 mb-4">
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father First Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.father_first_name || ''}
+                              onChange={(e) => handlePatientFieldChange('father_first_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.father_first_name && <p className="text-xs text-red-600 mt-1">{editErrors.father_first_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.father_first_name || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father Middle Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.father_middle_name || ''}
+                              onChange={(e) => handlePatientFieldChange('father_middle_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.father_middle_name && <p className="text-xs text-red-600 mt-1">{editErrors.father_middle_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.father_middle_name || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father Last Name</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayEditablePatient?.father_last_name || ''}
+                              onChange={(e) => handlePatientFieldChange('father_last_name', e.target.value)}
+                              onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.father_last_name && <p className="text-xs text-red-600 mt-1">{editErrors.father_last_name}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayEditablePatient?.father_last_name || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's suffix</label>
+                        {isEditingPatient ? (
+                          <select
+                            value={displayPatient?.father_suffix || ''}
+                            onChange={(e) => handlePatientFieldChange('father_suffix', e.target.value)}
                             className="input-field mt-1"
-                          />
-                          {editErrors.mother_name && <p className="text-xs text-red-600 mt-1">{editErrors.mother_name}</p>}
-                        </>
-                      ) : (
-                        <p className="text-sm mt-1">{displayPatient?.mother_name || 'N/A'}</p>
-                      )}
+                          >
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                          </select>
+                        ) : (
+                          <p className="text-sm mt-1">{displayPatient?.father_suffix || 'N/A'}</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's Name</label>
-                      {isEditingPatient ? (
-                        <>
-                          <input
-                            type="text"
-                            value={displayPatient?.father_name || ''}
-                            onChange={(e) => handlePatientFieldChange('father_name', e.target.value)}
-                            onKeyPress={(e) => { if (/\d/.test(e.key)) e.preventDefault() }}
-                            className="input-field mt-1"
-                          />
-                          {editErrors.father_name && <p className="text-xs text-red-600 mt-1">{editErrors.father_name}</p>}
-                        </>
-                      ) : (
-                        <p className="text-sm mt-1">{displayPatient?.father_name || 'N/A'}</p>
-                      )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Person to Notify</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="text"
+                              value={displayPatient?.person_to_notify || ''}
+                              onChange={(e) => handlePatientFieldChange('person_to_notify', e.target.value)}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.person_to_notify && <p className="text-xs text-red-600 mt-1">{editErrors.person_to_notify}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayPatient?.person_to_notify || 'N/A'}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Emergency Contact</label>
+                        {isEditingPatient ? (
+                          <>
+                            <input
+                              type="tel"
+                              inputMode="numeric"
+                              pattern="\d*"
+                              value={displayPatient?.emergency_contact || ''}
+                              onChange={(e) => handlePatientFieldChange('emergency_contact', e.target.value)}
+                              onBlur={() => handlePatientPhoneBlur('emergency_contact')}
+                              className="input-field mt-1"
+                            />
+                            {editErrors.emergency_contact && <p className="text-xs text-red-600 mt-1">{editErrors.emergency_contact}</p>}
+                          </>
+                        ) : (
+                          <p className="text-sm mt-1">{displayPatient?.emergency_contact || 'N/A'}</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Father's suffix</label>
-                      {isEditingPatient ? (
-                        <select
-                          value={displayPatient?.father_suffix || ''}
-                          onChange={(e) => handlePatientFieldChange('father_suffix', e.target.value)}
-                          className="input-field mt-1"
-                        >
-                          <option value="">None</option>
-                          <option value="Jr.">Jr.</option>
-                          <option value="Sr.">Sr.</option>
-                          <option value="II">II</option>
-                          <option value="III">III</option>
-                          <option value="IV">IV</option>
-                        </select>
-                      ) : (
-                        <p className="text-sm mt-1">{displayPatient?.father_suffix || 'N/A'}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Person to Notify</label>
-                      {isEditingPatient ? (
-                        <>
-                          <input
-                            type="text"
-                            value={displayPatient?.person_to_notify || ''}
-                            onChange={(e) => handlePatientFieldChange('person_to_notify', e.target.value)}
-                            className="input-field mt-1"
-                          />
-                          {editErrors.person_to_notify && <p className="text-xs text-red-600 mt-1">{editErrors.person_to_notify}</p>}
-                        </>
-                      ) : (
-                        <p className="text-sm mt-1">{displayPatient?.person_to_notify || 'N/A'}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Emergency Contact</label>
-                      {isEditingPatient ? (
-                        <>
-                          <input
-                            type="tel"
-                            inputMode="numeric"
-                            pattern="\d*"
-                            value={displayPatient?.emergency_contact || ''}
-                            onChange={(e) => handlePatientFieldChange('emergency_contact', e.target.value.replace(/\D/g, ''))}
-                            className="input-field mt-1"
-                          />
-                          {editErrors.emergency_contact && <p className="text-xs text-red-600 mt-1">{editErrors.emergency_contact}</p>}
-                        </>
-                      ) : (
-                        <p className="text-sm mt-1">{displayPatient?.emergency_contact || 'N/A'}</p>
-                      )}
-                    </div>
-                    <div className="col-span-2">
+                    <div className="col-span-2 mt-4">
                       <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Voucher Type</label>
                       {isEditingPatient ? (
                         <input

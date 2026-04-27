@@ -6,7 +6,7 @@ import { StudentList, StudentDetailsModal, StudentFormModal } from '../component
 import type { Student } from '../types'
 
 export default function Students() {
-  const { students, addStudent } = useStudents()
+  const { students, loadStudents, addStudent } = useStudents()
   const { profile } = useAuth()
   const [search, setSearch] = useState('')
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
@@ -54,6 +54,7 @@ export default function Students() {
         search={search}
         onSearchChange={setSearch}
         onViewDetails={handleViewDetails}
+        onStudentsReload={loadStudents}
       />
 
       <StudentDetailsModal

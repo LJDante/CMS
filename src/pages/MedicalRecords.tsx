@@ -6,6 +6,20 @@ import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { getDisplayName } from '../utils/nameFormatter'
 import * as XLSX from 'xlsx'
+
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const date = new Date(dateStr + 'T00:00:00')
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  } catch {
+    return 'N/A'
+  }
+}
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 import philippinesData from '../constants/philippines.json'
@@ -173,7 +187,7 @@ export default function MedicalRecords() {
   const openPrintableRecord = () => {
     if (!selected) return
     const physician = getDisplayName(profile?.full_name, profile?.role) || '[YOUR NAME], [YOUR COMPANY NAME]'
-    const dob = selected.date_of_birth ? new Date(selected.date_of_birth).toLocaleDateString() : 'N/A'
+    const dob = formatDate(selected.date_of_birth || null)
     const address = selected.address_field?.trim() || 'N/A'
 
     const visitsHtml = medicalHistory.length > 0
@@ -413,7 +427,7 @@ export default function MedicalRecords() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500">Date of Birth</label>
-                    <p className="text-sm text-slate-700">{selected.date_of_birth ? new Date(selected.date_of_birth).toLocaleDateString() : 'N/A'}</p>
+                    <p className="text-sm text-slate-700">{formatDate(selected.date_of_birth || null)}</p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-500">Gender</label>

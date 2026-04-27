@@ -26,7 +26,13 @@ export function useStudentForm() {
     guardian_contact: '',
     guardian_email: '',
     mother_name: '',
+    mother_first_name: '',
+    mother_middle_name: '',
+    mother_last_name: '',
     father_name: '',
+    father_first_name: '',
+    father_middle_name: '',
+    father_last_name: '',
     suffix: '',
     father_suffix: '',
     person_to_notify: '',
@@ -50,6 +56,47 @@ export function useStudentForm() {
   const digitsOnly = (v: string) => v.replace(/\D/g, '')
   const alphanumericStreet = (v: string) => v.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -\d]/g, '')
 
+  const normalizePhone = (val: string | null | undefined) => {
+    if (!val) return null
+    let digits = String(val).trim().replace(/\D/g, '')
+
+    if (digits.startsWith('63') && digits.length === 12) {
+      digits = '0' + digits.slice(2)
+    }
+
+    if (digits.length === 10 && digits.startsWith('9')) {
+      digits = '0' + digits
+    }
+
+    if (digits.length === 11 && digits.startsWith('0')) {
+      return digits
+    }
+
+    console.log(`Unparseable phone number: ${val} → digits: ${digits}`)
+    return null
+  }
+
+  const handlePhoneBlur = (field: 'contact_number' | 'guardian_contact' | 'emergency_contact') => {
+    const value = form[field]
+    const normalized = normalizePhone(value)
+
+    if (normalized) {
+      setForm((f) => ({ ...f, [field]: normalized }))
+      clearError(field)
+      return
+    }
+
+    if (value && value.trim() !== '') {
+      setError(field, 'Enter an 11-digit Philippine mobile number (e.g. 09171234567)')
+    }
+  }
+
+  const formatPatientId = (value: string) => {
+    const digits = digitsOnly(value).slice(0, 7)
+    if (digits.length <= 2) return digits
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`
+  }
+
   // error helpers
   const setError = (field: string, message: string) => setErrors((e) => ({ ...e, [field]: message }))
   const clearError = (field: string) => setErrors((e) => {
@@ -60,7 +107,7 @@ export function useStudentForm() {
   // probe for missing columns once
   useEffect(() => {
     const probe = async () => {
-      const colsToCheck = ['patient_id', 'age', 'date_of_birth', 'education_level', 'guardian_email', 'address_field', 'barangay', 'city', 'province', 'zip_code', 'middle_name', 'patient_type', 'program', 'year_level', 'shs_track', 'suffix', 'father_suffix']
+      const colsToCheck = ['patient_id', 'age', 'date_of_birth', 'education_level', 'guardian_email', 'address_field', 'barangay', 'city', 'province', 'zip_code', 'middle_name', 'patient_type', 'program', 'year_level', 'shs_track', 'suffix', 'father_suffix', 'mother_first_name', 'mother_middle_name', 'mother_last_name', 'father_first_name', 'father_middle_name', 'father_last_name']
       const missing: Record<string, boolean> = {}
       for (const col of colsToCheck) {
         const { error } = await supabase.from('patients').select(col).limit(1)
@@ -97,10 +144,11 @@ export function useStudentForm() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {}
 
-    // ID validation - REQUIRED (exactly 7 digits)
+    // ID validation - REQUIRED (format YY-XXXXX)
+    const patientIdRegex = /^\d{2}-\d{5}$/
     if (!missingColumns.patient_id) {
-      if (!form.student_id || !/^\d{7}$/.test(form.student_id)) {
-        newErrors.student_id = 'ID must be exactly 7 digits'
+      if (!form.student_id || !patientIdRegex.test(form.student_id)) {
+        newErrors.student_id = 'ID Number must be in format XX-XXXXX (e.g. 22-10001)'
       }
     } else {
       if (form.student_id) {
@@ -134,7 +182,7 @@ export function useStudentForm() {
     }
 
     // Contact number - REQUIRED (exactly 11 digits)
-    if (!form.contact_number || !/^\d{11}$/.test(form.contact_number)) {
+    if (!form.contact_number || !normalizePhone(form.contact_number)) {
       newErrors.contact_number = 'Contact number is required and must be exactly 11 digits'
     }
 
@@ -174,7 +222,7 @@ export function useStudentForm() {
       if (!form.guardian_name || !/^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/.test(form.guardian_name)) {
         newErrors.guardian_name = 'Guardian name is required for students'
       }
-      if (!form.guardian_contact || !/^\d{11}$/.test(form.guardian_contact)) {
+      if (!form.guardian_contact || !normalizePhone(form.guardian_contact)) {
         newErrors.guardian_contact = 'Guardian contact is required and must be exactly 11 digits'
       }
       if (!form.guardian_email || !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/i.test(form.guardian_email)) {
@@ -182,19 +230,30 @@ export function useStudentForm() {
       }
     }
 
-    if (form.mother_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.mother_name)) {
-      newErrors.mother_name = 'Name must contain letters only'
+    if (form.mother_first_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.mother_first_name)) {
+      newErrors.mother_first_name = 'Name must contain letters only'
     }
-
-    if (form.father_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.father_name)) {
-      newErrors.father_name = 'Name must contain letters only'
+    if (form.mother_middle_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.mother_middle_name)) {
+      newErrors.mother_middle_name = 'Name must contain letters only'
+    }
+    if (form.mother_last_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.mother_last_name)) {
+      newErrors.mother_last_name = 'Name must contain letters only'
+    }
+    if (form.father_first_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.father_first_name)) {
+      newErrors.father_first_name = 'Name must contain letters only'
+    }
+    if (form.father_middle_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.father_middle_name)) {
+      newErrors.father_middle_name = 'Name must contain letters only'
+    }
+    if (form.father_last_name && !/^[A-Za-zÀ-ÖØ-öø-ÿ'. -]+$/.test(form.father_last_name)) {
+      newErrors.father_last_name = 'Name must contain letters only'
     }
 
     if (form.allergies && /\d/.test(form.allergies)) {
       newErrors.allergies = 'Allergies should not contain numbers'
     }
 
-    if (form.emergency_contact && !/^\d{11}$/.test(form.emergency_contact)) {
+    if (form.emergency_contact && !normalizePhone(form.emergency_contact)) {
       newErrors.emergency_contact = 'Emergency contact must be exactly 11 digits'
     }
 
@@ -215,16 +274,18 @@ export function useStudentForm() {
 
     // Numeric-only fields (enforce max lengths)
     if (
-      name === 'guardian_contact' ||
-      name === 'contact_number' ||
       name === 'student_id' ||
       name === 'age' ||
       name === 'grade_level' ||
       name === 'zip_code'
     ) {
       let digits = digitsOnly(value)
-      if (name === 'student_id') digits = digits.slice(0, 7)
-      if (name === 'contact_number' || name === 'guardian_contact') digits = digits.slice(0, 11)
+      if (name === 'student_id') {
+        const formatted = formatPatientId(value)
+        setForm((f) => ({ ...f, [name]: formatted }))
+        clearError(name)
+        return
+      }
       if (name === 'age') digits = digits.slice(0, 3)
       if (name === 'grade_level') digits = digits.slice(0, 2)
       if (name === 'zip_code') digits = digits.slice(0, 4)
@@ -252,7 +313,16 @@ export function useStudentForm() {
     }
 
     // Parents' names - letters only
-    if (name === 'mother_name' || name === 'father_name') {
+    if ([
+      'mother_name',
+      'father_name',
+      'mother_first_name',
+      'mother_middle_name',
+      'mother_last_name',
+      'father_first_name',
+      'father_middle_name',
+      'father_last_name'
+    ].includes(name)) {
       const letters = lettersOnly(value)
       setForm((f) => ({ ...f, [name]: letters }))
       clearError(name)
@@ -275,14 +345,6 @@ export function useStudentForm() {
       return
     }
 
-    // Emergency contact number - digits only
-    if (name === 'emergency_contact') {
-      let digits = digitsOnly(value)
-      digits = digits.slice(0, 11)
-      setForm((f) => ({ ...f, emergency_contact: digits }))
-      clearError('emergency_contact')
-      return
-    }
 
     // Emergency contact name - letters only
     if (name === 'person_to_notify') {
@@ -413,17 +475,22 @@ export function useStudentForm() {
         first_name: form.first_name,
         last_name: form.last_name,
         grade_level,
-        section: isStudent && (education_level === 'k-12' || education_level === 'kindergarten') ? form.section || null : null,
+        section: isStudent && ['k-12', 'kindergarten', 'shs'].includes(education_level) ? form.section || null : null,
         sex: form.sex,
-        contact_number: form.contact_number || null,
+        contact_number: normalizePhone(form.contact_number),
         guardian_name: form.guardian_name || null,
-        guardian_contact: form.guardian_contact || null,
-        mother_name: form.mother_name || null,
-        father_name: form.father_name || null,
+        guardian_contact: normalizePhone(form.guardian_contact),
         person_to_notify: form.person_to_notify || null,
-        emergency_contact: form.emergency_contact || null,
+        emergency_contact: normalizePhone(form.emergency_contact),
         voucher_type: form.voucher_type || null
       }
+
+      if (!missingColumns.mother_first_name) payload.mother_first_name = form.mother_first_name || null
+      if (!missingColumns.mother_middle_name) payload.mother_middle_name = form.mother_middle_name || null
+      if (!missingColumns.mother_last_name) payload.mother_last_name = form.mother_last_name || null
+      if (!missingColumns.father_first_name) payload.father_first_name = form.father_first_name || null
+      if (!missingColumns.father_middle_name) payload.father_middle_name = form.father_middle_name || null
+      if (!missingColumns.father_last_name) payload.father_last_name = form.father_last_name || null
 
       if (!missingColumns.patient_id) payload.patient_id = form.student_id
       if (!missingColumns.age) payload.age = form.age ? Number(form.age) : null
@@ -508,7 +575,15 @@ export function useStudentForm() {
       guardian_contact: '',
       guardian_email: '',
       mother_name: '',
+      mother_first_name: '',
+      mother_middle_name: '',
+      mother_last_name: '',
       father_name: '',
+      father_first_name: '',
+      father_middle_name: '',
+      father_last_name: '',
+      suffix: '',
+      father_suffix: '',
       person_to_notify: '',
       emergency_contact: '',
       voucher_type: '',
@@ -529,6 +604,7 @@ export function useStudentForm() {
     missingColumns,
     submitting,
     handleChange,
+    handlePhoneBlur,
     submitForm,
     resetForm
   }

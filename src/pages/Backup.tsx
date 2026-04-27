@@ -159,10 +159,14 @@ export function Backup() {
           const studentIdIndex = headers.indexOf('Student ID')
           if (studentIdIndex !== -1) sampleRow[studentIdIndex] = '012345'
 
-          const patientTypeIndex = headers.indexOf('Patient Type')
-          if (patientTypeIndex !== -1) {
-            sampleRow[patientTypeIndex] = patientUploadCategory === 'personnel' ? 'personnel' : 'student'
-          }
+          const addressIndex = headers.indexOf('Address')
+          if (addressIndex !== -1) sampleRow[addressIndex] = 'Block 39A Lot 6A Dumaguete Street South City Homes'
+
+          const dobIndex = headers.indexOf('Date of Birth')
+          if (dobIndex !== -1) sampleRow[dobIndex] = 'July 27, 2003'
+
+          const ageIndex = headers.indexOf('Age')
+          if (ageIndex !== -1) sampleRow[ageIndex] = '17'
 
           const educationLevelIndex = headers.indexOf('Education Level')
           if (educationLevelIndex !== -1) {
@@ -198,8 +202,57 @@ export function Backup() {
           if (sexIndex !== -1) {
             sampleRow[sexIndex] = 'M'
           }
+
+          const suffixIndex = headers.indexOf('Suffix')
+          if (suffixIndex !== -1) sampleRow[suffixIndex] = 'Jr.'
+
+          const fatherSuffixIndex = headers.indexOf('Father Suffix')
+          if (fatherSuffixIndex !== -1) sampleRow[fatherSuffixIndex] = 'Jr.'
+
+          const guardianEmailIndex = headers.indexOf('Guardian Email')
+          if (guardianEmailIndex !== -1) sampleRow[guardianEmailIndex] = 'guardian@example.com'
+
+          const enrollmentStatusIndex = headers.indexOf('Enrollment Status')
+          if (enrollmentStatusIndex !== -1) sampleRow[enrollmentStatusIndex] = 'active'
+
+          const adviserIndex = headers.indexOf('Adviser')
+          if (adviserIndex !== -1) sampleRow[adviserIndex] = 'Mrs. Smith'
+
+          const contactColumns = ['Contact Number', 'Emergency Contact', 'Guardian Contact']
+          contactColumns.forEach((colName) => {
+            const contactIndex = headers.indexOf(colName)
+            if (contactIndex !== -1) {
+              sampleRow[contactIndex] = '09123456789'
+            }
+          })
         }
         XLSX.utils.sheet_add_aoa(ws, [sampleRow], { origin: 1 })
+
+        if (selectedTable === 'patients') {
+          const contactColumns = ['Contact Number', 'Emergency Contact', 'Guardian Contact']
+          contactColumns.forEach((colName) => {
+            const colIndex = headers.indexOf(colName)
+            if (colIndex === -1) return
+
+            for (let row = 0; row <= 100; row++) {
+              const cellRef = XLSX.utils.encode_cell({ r: row, c: colIndex })
+              if (!ws[cellRef]) {
+                ws[cellRef] = { t: 's', v: '' }
+              } else {
+                ws[cellRef].t = 's'
+                ws[cellRef].v = String(ws[cellRef].v || '')
+              }
+            }
+
+            const headerCellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex })
+            if (!ws[headerCellRef]) ws[headerCellRef] = { t: 's', v: colName }
+            if (!ws['!cols']) ws['!cols'] = []
+            ws['!cols'][colIndex] = {
+              ...(ws['!cols'][colIndex] || {}),
+              wch: 15
+            }
+          })
+        }
       }
 
       // Format quantity columns as text to preserve leading zeros
@@ -209,7 +262,7 @@ export function Backup() {
           const header = headers[col]
           if ((selectedTable === 'inventory' && (header === 'quantity_on_hand' || header === 'reorder_level')) ||
               (selectedTable === 'supply_request_items' && header === 'quantity') ||
-              (selectedTable === 'patients' && header === 'student_id')) {
+              (selectedTable === 'patients' && (header === 'student_id' || header === 'Contact Number' || header === 'Emergency Contact' || header === 'Guardian Contact'))) {
             const cellRef = XLSX.utils.encode_cell({ r: row, c: col })
             if (!ws[cellRef]) ws[cellRef] = { t: 's', v: '' }
             ws[cellRef].t = 's' // Force as string/text
@@ -231,7 +284,7 @@ export function Backup() {
 
   const getDefaultHeadersForTable = (table: string): string[] => {
     const tableHeaders: { [key: string]: string[] } = {
-      patients: ['Student ID', 'Grade Level', 'Section', 'Last Name', 'First Name', 'Middle Name', 'Address', 'Date of Birth', 'Contact Number', 'Mother\'s Name', 'Father\'s Name', 'Guardian\'s Name', 'Person to Notify', 'Emergency Contact', 'Voucher Type', 'Patient Type', 'Program', 'Year Level', 'SHS Track', 'Education Level'],
+      patients: ['Student ID', 'Grade Level', 'Section', 'Last Name', 'First Name', 'Middle Name', 'Address', 'Date of Birth', 'Age', 'Sex', 'Suffix', 'Father Suffix', 'Contact Number', 'Guardian Contact', 'Guardian Email', 'Mother\'s Name', 'Mother First Name', 'Mother Middle Name', 'Mother Last Name', 'Father\'s Name', 'Father First Name', 'Father Middle Name', 'Father Last Name', 'Guardian\'s Name', 'Person to Notify', 'Emergency Contact', 'Voucher Type', 'Patient Type', 'Program', 'Year Level', 'SHS Track', 'Education Level', 'Enrollment Status', 'Adviser', 'Barangay', 'City', 'Province', 'Zip Code', 'Allergies', 'Diagnosed Diseases'],
       inventory: ['id', 'name', 'category', 'unit', 'quantity_on_hand', 'reorder_level', 'expiration_date', 'remarks', 'created_at', 'updated_at'],
       profiles: ['id', 'user_id', 'email', 'full_name', 'role', 'created_at', 'updated_at'],
       medical_records: ['id', 'patient_id', 'record_date', 'diagnosis', 'treatment', 'medications', 'notes', 'created_at', 'updated_at'],
@@ -246,6 +299,29 @@ export function Backup() {
     return tableHeaders[table] || []
   }
 
+  const parseDateOfBirth = (input: string): string | null => {
+    if (!input) return null
+    try {
+      let date: Date
+      const dateMatch = /^\s*(\d{4})-(\d{2})-(\d{2})\s*$/.exec(input)
+      if (dateMatch) {
+        const year = Number(dateMatch[1])
+        const month = Number(dateMatch[2])
+        const day = Number(dateMatch[3])
+        date = new Date(year, month - 1, day)
+      } else {
+        date = new Date(input)
+      }
+      if (!isNaN(date.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, '0')
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -256,7 +332,7 @@ export function Backup() {
       const parsed = Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
-        dynamicTyping: true
+        dynamicTyping: false
       })
 
       if (parsed.errors.length > 0) {
@@ -292,165 +368,435 @@ export function Backup() {
       // Transform data for patients table
       let transformedData = data
       let skippedRows: { row: number, reason: string }[] = []
+      let contactNumberReport: string[] = []
+      let guardianContactReport: string[] = []
+      let emergencyContactReport: string[] = []
+      let contactNumberSavedCount = 0
+      let contactNumberNullCount = 0
+      let guardianContactSavedCount = 0
+      let guardianContactNullCount = 0
+      let emergencyContactSavedCount = 0
+      let emergencyContactNullCount = 0
 
       if (selectedTable === 'patients') {
-        transformedData = []
-        data.forEach((row, index) => {
-          const studentId = String(row['Student ID'] || '').trim()
+        const getCSVValue = (row: any, ...keys: string[]) => {
+          for (const key of keys) {
+            const value = row[key]
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+              return String(value)
+            }
+          }
+          return ''
+        }
 
-          // Skip rows where Student ID is not numeric
-          if (!studentId || !/^\d+$/.test(studentId)) {
-            skippedRows.push({ row: index + 2, reason: 'Invalid or missing Student ID' })
+        const parseFullName = (fullName: string) => {
+          const value = String(fullName || '').trim()
+          if (!value) {
+            return { first: null, middle: null, last: null }
+          }
+
+          if (value.includes(',')) {
+            const parts = value.split(',')
+            const last = parts[0].trim() || null
+            const remaining = parts[1]?.trim() || ''
+            const names = remaining.split(/\s+/).filter(Boolean)
+            const first = names[0] || null
+            const middle = names.length > 1 ? names.slice(1).join(' ') : null
+            return { first, middle, last }
+          }
+
+          const parts = value.split(/\s+/).filter(Boolean)
+          if (parts.length === 1) {
+            return { first: parts[0], middle: null, last: parts[0] }
+          }
+          if (parts.length === 2) {
+            return { first: parts[0], middle: null, last: parts[1] }
+          }
+
+          return {
+            first: parts[0] || null,
+            middle: parts.slice(1, -1).join(' ') || null,
+            last: parts[parts.length - 1] || null
+          }
+        }
+
+        const normalizeRow = (rawRow: any) => {
+          const lookup: Record<string, any> = {}
+          Object.keys(rawRow).forEach((key) => {
+            const normalizedKey = String(key || '').toLowerCase().trim().replace(/\s+/g, '_')
+            lookup[normalizedKey] = rawRow[key]
+          })
+
+          const get = (...keys: string[]) => {
+            for (const key of keys) {
+              const normalizedKey = String(key || '').toLowerCase().trim().replace(/\s+/g, '_')
+              const val = lookup[normalizedKey]
+              if (val !== undefined && val !== '') return val
+            }
+            return null
+          }
+
+          return {
+            patient_id: get('patient_id', 'id_number', 'student_id'),
+            first_name: get('first_name', 'firstname', 'first name'),
+            middle_name: get('middle_name', 'middlename', 'middle name'),
+            last_name: get('last_name', 'lastname', 'last name'),
+            suffix: get('suffix') || null,
+            sex: normalizeSex(get('sex', 'gender')),
+            age: parseInt(String(get('age'))) || null,
+            date_of_birth: parseDate(get('date_of_birth', 'birthday', 'dob', 'birthdate', 'date of birth')),
+            contact_number: normalizePhone(get('contact_number', 'contact number', 'contact', 'phone', 'mobile', 'cellphone')),
+            patient_type: get('patient_type', 'type') || 'student',
+            education_level: normalizeEducationLevel(get('education_level', 'education level')),
+            grade_level: get('grade_level', 'grade level', 'grade', 'gradelevel') || null,
+            section: get('section') || null,
+            shs_track: normalizeSHSTrack(get('shs_track', 'track', 'strand', 'shs track')),
+            year_level: get('year_level', 'year level', 'year') || null,
+            program: get('program', 'course', 'degree') || null,
+            guardian_name: get('guardian_name', 'guardian name', 'guardian') || null,
+            guardian_contact: normalizePhone(get('guardian_contact', 'guardian contact', 'guardian_contact_number', 'guardian phone')),
+            guardian_email: get('guardian_email', 'guardian email') || null,
+            mother_first_name: get('mother_first_name', 'mother first name', "mother's first name") || null,
+            mother_middle_name: get('mother_middle_name', 'mother middle name') || null,
+            mother_last_name: get('mother_last_name', 'mother last name') || null,
+            father_first_name: get('father_first_name', 'father first name') || null,
+            father_middle_name: get('father_middle_name', 'father middle name') || null,
+            father_last_name: get('father_last_name', 'father last name') || null,
+            father_suffix: normalizeFatherSuffix(get('father_suffix', 'father suffix')),
+            person_to_notify: get('person_to_notify', 'person to notify') || null,
+            emergency_contact: normalizePhone(get('emergency_contact', 'emergency contact', 'emergency_contact_number', 'emergency phone', 'person_to_notify_contact')),
+            voucher_type: get('voucher_type', 'voucher type') || null,
+            address_field: get('address_field', 'address') || null,
+            barangay: get('barangay') || null,
+            city: get('city') || null,
+            province: get('province') || null,
+            zip_code: normalizeZip(get('zip_code', 'zip', 'zipcode')),
+            enrollment_status: get('enrollment_status', 'enrollment status') || 'active',
+            allergies: get('allergies') || null,
+            diagnosed_diseases: get('diagnosed_diseases', 'diagnosed diseases', 'diseases') || null,
+            adviser: get('adviser') || null
+          }
+        }
+
+        const normalizePatientId = (value: any) => {
+          const raw = String(value || '').trim()
+          if (/^\d{2}-\d{5}$/.test(raw)) return raw
+          const digits = raw.replace(/\D/g, '')
+          if (/^\d{7}$/.test(digits)) {
+            return `${digits.slice(0, 2)}-${digits.slice(2)}`
+          }
+          return null
+        }
+
+        const normalizeSex = (val: any) => {
+          if (val == null) return null
+          const v = String(val).trim().toUpperCase()
+          if (v === 'M' || v === 'MALE') return 'M'
+          if (v === 'F' || v === 'FEMALE') return 'F'
+          return null
+        }
+
+        const normalizePhone = (val: any) => {
+          if (!val) return null
+          let digits = val.toString().trim().replace(/\D/g, '')
+
+          // +639XXXXXXXXX or 639XXXXXXXXX → 09XXXXXXXXX
+          if (digits.startsWith('63') && digits.length === 12) {
+            digits = '0' + digits.slice(2)
+          }
+
+          // 9XXXXXXXXX → 09XXXXXXXXX
+          if (digits.length === 10 && digits.startsWith('9')) {
+            digits = '0' + digits
+          }
+
+          if (digits.length === 11 && digits.startsWith('0')) {
+            return digits
+          }
+
+          console.log(`Unparseable phone number: ${val} → digits: ${digits}`)
+          return null
+        }
+
+        const normalizeZip = (val: any) => {
+          if (val == null) return null
+          const digits = String(val).replace(/\D/g, '')
+          return digits.length === 4 ? digits : null
+        }
+
+        const normalizeSHSTrack = (val: any) => {
+          if (val == null) return null
+          const v = String(val).trim().toUpperCase()
+          return ['ABM', 'HUMSS', 'STEM'].includes(v) ? v : null
+        }
+
+        const normalizeFatherSuffix = (val: any) => {
+          if (!val) return null
+          const v = String(val).trim()
+          const valid = ['Jr.', 'Sr.', 'II', 'III', 'IV']
+          if (valid.includes(v)) return v
+          const match = valid.find((s) => s.toLowerCase() === v.toLowerCase())
+          if (match) return match
+          return null
+        }
+
+        const normalizeEducationLevel = (val: any) => {
+          if (val == null) return null
+          const v = String(val).trim().toLowerCase()
+          const map: Record<string, string> = {
+            kindergarten: 'kindergarten',
+            kinder: 'kindergarten',
+            'k-12': 'k-12',
+            k12: 'k-12',
+            elementary: 'k-12',
+            'junior high': 'k-12',
+            jhs: 'k-12',
+            shs: 'shs',
+            'senior high': 'shs',
+            college: 'college',
+            'n/a': 'n/a'
+          }
+          return map[v] || null
+        }
+
+        const parseDate = (value: any) => {
+          if (!value) return null
+          const str = String(value).trim()
+
+          // Excel serial number
+          if (/^\d{5}$/.test(str)) {
+            const excelEpoch = new Date(1899, 11, 30)
+            const date = new Date(excelEpoch.getTime() + parseInt(str, 10) * 86400000)
+            return date.toISOString().split('T')[0]
+          }
+
+          // DD/MM/YYYY
+          const dmySlash = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+          if (dmySlash) {
+            const [, d, m, y] = dmySlash
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+          }
+
+          // DD-MM-YYYY
+          const dmyDash = str.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+          if (dmyDash) {
+            const [, d, m, y] = dmyDash
+            return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+          }
+
+          // YYYY-MM-DD (already correct)
+          if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+
+          const parsed = new Date(str)
+          if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString().split('T')[0]
+          }
+
+          console.log(`Unparseable date_of_birth: ${str}`)
+          return null
+        }
+
+        const parseStudentName = (row: any) => {
+          const first_name = String(getCSVValue(row, 'First Name', 'first_name') || '').trim() || null
+          const middle_name = String(getCSVValue(row, 'Middle Name', 'middle_name') || '').trim() || null
+          const last_name = String(getCSVValue(row, 'Last Name', 'last_name') || '').trim() || null
+
+          if ((first_name && last_name) || (first_name && middle_name) || (last_name && middle_name)) {
+            return { first_name, middle_name, last_name }
+          }
+
+          const studentName = String(getCSVValue(row, 'Student Name', 'student_name') || '').trim()
+          if (!studentName) {
+            return { first_name: first_name || last_name || 'Unknown', middle_name, last_name: last_name || first_name || 'Unknown' }
+          }
+
+          const cleanName = studentName.replace(/\s+(Jr\.?|Sr\.?|II|III|IV)$/i, '')
+          if (cleanName.includes(',')) {
+            const parts = cleanName.split(',')
+            const last = parts[0].trim()
+            const remaining = parts[1]?.trim() || ''
+            const names = remaining.split(/\s+/).filter(Boolean)
+            return {
+              first_name: names[0] || null,
+              middle_name: names.length > 1 ? names.slice(1).join(' ') : null,
+              last_name: last || null
+            }
+          }
+
+          const parts = cleanName.split(/\s+/).filter(Boolean)
+          if (parts.length === 1) {
+            return { first_name: parts[0], middle_name: null, last_name: parts[0] }
+          }
+          if (parts.length === 2) {
+            return { first_name: parts[0], middle_name: null, last_name: parts[1] }
+          }
+
+          return {
+            first_name: parts[0] || null,
+            middle_name: parts.slice(1, -1).join(' ') || null,
+            last_name: parts[parts.length - 1] || null
+          }
+        }
+
+        transformedData = []
+        const patientIdPattern = /^\d{2}-\d{5}$/
+
+        data.forEach((row, index) => {
+          const normalized = normalizeRow(row)
+          const rawPatientId = String(normalized.patient_id || '').trim()
+          const patientId = normalizePatientId(rawPatientId)
+
+          const rawContactNumber = String(getCSVValue(row, 'contact_number', 'contact number', 'contact', 'phone', 'mobile', 'cellphone') || '').trim()
+          if (normalized.contact_number) {
+            contactNumberSavedCount++
+          } else {
+            contactNumberNullCount++
+            contactNumberReport.push(`row ${index + 2}: raw contact_number='${rawContactNumber}'`)
+          }
+
+          const rawGuardianContact = String(getCSVValue(row, 'guardian_contact', 'guardian contact', 'guardian_contact_number', 'guardian phone') || '').trim()
+          if (normalized.guardian_contact) {
+            guardianContactSavedCount++
+          } else {
+            guardianContactNullCount++
+            guardianContactReport.push(`row ${index + 2}: raw guardian_contact='${rawGuardianContact}'`)
+          }
+
+          const rawEmergencyContact = String(getCSVValue(row, 'emergency_contact', 'emergency contact', 'emergency_contact_number', 'emergency phone', 'person_to_notify_contact') || '').trim()
+          if (normalized.emergency_contact) {
+            emergencyContactSavedCount++
+          } else {
+            emergencyContactNullCount++
+            emergencyContactReport.push(`row ${index + 2}: raw emergency_contact='${rawEmergencyContact}'`)
+          }
+
+          if (!patientId || !patientIdPattern.test(patientId)) {
+            skippedRows.push({ row: index + 2, reason: `Invalid Student ID / patient_id format: ${rawPatientId}` })
             return
           }
 
-          // Transform student name - use separate columns or fallback to parsing Student Name
-          let first_name = String(row['First Name'] || '').trim() || null
-          let middle_name = String(row['Middle Name'] || '').trim() || null
-          let last_name = String(row['Last Name'] || '').trim() || null
+          const nameParts = parseStudentName(row)
+          let first_name = normalized.first_name || nameParts.first_name
+          let middle_name = normalized.middle_name || nameParts.middle_name
+          let last_name = normalized.last_name || nameParts.last_name
 
-          // Fallback to parsing Student Name if separate columns are not provided
-          if ((!first_name && !last_name) || (first_name === '' && last_name === '')) {
-            const studentName = String(row['Student Name'] || '').trim()
-            if (studentName) {
-              // Strip suffixes
-              let cleanName = studentName.replace(/\s+(Jr\.?|Sr\.?|II|III)$/i, '')
-
-              if (cleanName.includes(',')) {
-                const parts = cleanName.split(',')
-                last_name = parts[0].trim()
-                const remaining = parts[1].trim()
-
-                if (remaining) {
-                  const nameParts = remaining.split(/\s+/)
-                  first_name = nameParts[0]
-                  if (nameParts.length > 1) {
-                    middle_name = nameParts.slice(1).join(' ')
-                  }
-                }
-              } else {
-                last_name = cleanName
-              }
-            }
-          }
-
-          // Ensure first_name and last_name are not null
           if (!first_name) first_name = last_name || 'Unknown'
           if (!last_name) last_name = first_name || 'Unknown'
 
-          // Detect education level and grade level
-          const gradeLevelInput = String(row['Grade Level'] || '').trim()
-          let grade_level = null
-          let education_level = null
-          let year_level = null
-          let program = null
-          let shs_track = null
-
-          if (gradeLevelInput) {
-            if (gradeLevelInput.match(/^(Kindergarten|Kinder|K)$/i)) {
-              grade_level = 'K'
-              education_level = 'kindergarten'
-            } else if (/^\d+$/.test(gradeLevelInput)) {
-              const level = parseInt(gradeLevelInput)
-              if (level >= 1 && level <= 10) {
-                grade_level = gradeLevelInput
-                education_level = 'k-12'
-              } else if (level === 11 || level === 12) {
-                grade_level = gradeLevelInput
-                education_level = 'shs'
-                shs_track = String(row['SHS Track'] || '').trim() || null
-              }
-            } else if (gradeLevelInput.match(/^(1st|2nd|3rd|4th)$/i)) {
-              year_level = gradeLevelInput
-              program = String(row['Section'] || '').trim()
-              education_level = 'college'
-            }
+          const calculatedDateOfBirth = normalized.date_of_birth
+          if (String(getCSVValue(row, 'Date of Birth', 'date_of_birth') || '').trim() && calculatedDateOfBirth == null) {
+            console.warn(`Unparseable date_of_birth for row ${index + 2}:`, getCSVValue(row, 'Date of Birth', 'date_of_birth'))
           }
 
-          // Transform date of birth
-          let date_of_birth = null
-          const dobInput = String(row['Date of Birth'] || '').trim()
-          if (dobInput) {
-            try {
-              const date = new Date(dobInput)
-              if (!isNaN(date.getTime())) {
-                date_of_birth = date.toISOString().split('T')[0]
-              }
-            } catch (e) {
-              // Invalid date, leave as null
-            }
+          const calculateAge = (dob: string | null): number | null => {
+            if (!dob) return null
+            const birth = new Date(dob)
+            const today = new Date()
+            let age = today.getFullYear() - birth.getFullYear()
+            const m = today.getMonth() - birth.getMonth()
+            if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+            return age
           }
-
-          // Clean contact numbers
-          const cleanContactNumber = (input: string) => {
-            if (!input) return null
-            const cleaned = input.replace(/\D/g, '')
-            return cleaned.length === 11 ? cleaned : null
-          }
-
-          const patientTypeValue = String(row['Patient Type'] || '').trim() || null
-          const defaultPatientType = patientUploadCategory === 'personnel' ? 'personnel' : 'student'
-
-          const sexInput = String(row['Sex'] || '').trim().toUpperCase()
-          const sex = sexInput === 'M' || sexInput === 'MALE' ? 'M'
-            : sexInput === 'F' || sexInput === 'FEMALE' ? 'F'
-            : null
 
           const transformedRow = {
-            patient_id: studentId.padStart(7, '0'),
-            grade_level,
-            section: education_level !== 'college' ? String(row['Section'] || '').trim() : null,
+            patient_id: String(patientId),
             first_name,
             middle_name,
             last_name,
-            address_field: String(row['Address'] || '').trim() || null,
-            date_of_birth,
-            contact_number: cleanContactNumber(String(row['Contact Number'] || '')),
-            mother_name: String(row['Mother\'s Name'] || '').trim() || null,
-            father_name: String(row['Father\'s Name'] || '').trim() || null,
-            guardian_name: String(row['Guardian\'s Name'] || '').trim() || null,
-            person_to_notify: String(row['Person to Notify'] || '').trim() || null,
-            emergency_contact: cleanContactNumber(String(row['Emergency Contact'] || '')),
-            voucher_type: String(row['Voucher Type'] || '').trim() || null,
-            // Defaults
-            patient_type: patientTypeValue || defaultPatientType,
-            enrollment_status: 'active',
-            barangay: null,
-            city: null,
-            province: null,
-            zip_code: null,
-            sex,
-            // SHS fields
-            shs_track: education_level === 'shs' ? shs_track : null,
-            // College fields
-            year_level,
-            program: education_level === 'college' ? program : null,
-            education_level
+            suffix: normalized.suffix,
+            sex: normalized.sex,
+            age: normalized.age != null ? normalized.age : calculateAge(calculatedDateOfBirth),
+            date_of_birth: calculatedDateOfBirth,
+            contact_number: normalized.contact_number,
+            patient_type: normalized.patient_type,
+            education_level: normalized.education_level,
+            grade_level: normalized.grade_level,
+            section: normalized.section,
+            program: normalized.program,
+            year_level: normalized.year_level,
+            shs_track: normalized.shs_track,
+            address_field: normalized.address_field,
+            barangay: normalized.barangay,
+            city: normalized.city,
+            province: normalized.province,
+            zip_code: normalized.zip_code,
+            guardian_name: normalized.guardian_name,
+            guardian_contact: normalized.guardian_contact,
+            guardian_email: normalized.guardian_email,
+            person_to_notify: normalized.person_to_notify,
+            emergency_contact: normalized.emergency_contact,
+            voucher_type: normalized.voucher_type,
+            enrollment_status: normalized.enrollment_status,
+            mother_last_name: normalized.mother_last_name,
+            mother_first_name: normalized.mother_first_name,
+            mother_middle_name: normalized.mother_middle_name,
+            father_last_name: normalized.father_last_name,
+            father_first_name: normalized.father_first_name,
+            father_middle_name: normalized.father_middle_name,
+            father_suffix: normalized.father_suffix,
+            allergies: normalized.allergies,
+            diagnosed_diseases: normalized.diagnosed_diseases,
+            adviser: normalized.adviser || String(getCSVValue(row, 'Adviser', 'adviser') || '').trim() || null
           }
 
           transformedData.push(transformedRow)
         })
 
-        // Show import summary
         const imported = transformedData.length
         const skipped = skippedRows.length
         if (skipped > 0) {
           console.log('Skipped rows:', skippedRows)
-          toast.success(`${imported} students imported, ${skipped} rows skipped`)
+          toast(`${imported} students imported, ${skipped} rows skipped`, {
+            icon: '⚠️'
+          })
         } else {
           toast.success(`${imported} students imported`)
         }
       }
 
       // Insert data into selected table
-      const { error } = await supabase
-        .from(selectedTable)
-        .upsert(transformedData, { onConflict: selectedTable === 'patients' ? 'patient_id' : undefined })
-      if (error) {
-        console.error(`Error importing to ${selectedTable}:`, error)
-        toast.error(`Failed to import to ${selectedTable}: ${error.message}`)
-      } else if (selectedTable !== 'patients') {
-        toast.success(`Successfully imported ${transformedData.length} records to ${selectedTable}`)
+      if (selectedTable === 'patients') {
+        let successCount = 0
+        const failedRows: { row: any; error: string }[] = []
+
+        for (const row of transformedData) {
+          const { error } = await supabase
+            .from('patients')
+            .upsert(row, { onConflict: 'patient_id' })
+
+          if (error) {
+            failedRows.push({ row, error: error.message })
+          } else {
+            successCount++
+          }
+        }
+
+        console.log(`Import complete: ${successCount} success, ${failedRows.length} failed`)
+        console.log('Phone import summary:')
+        console.log(`  contact_number saved: ${contactNumberSavedCount}, null: ${contactNumberNullCount}`)
+        if (contactNumberReport.length > 0) console.log('    contact_number invalid rows:', contactNumberReport)
+        console.log(`  guardian_contact saved: ${guardianContactSavedCount}, null: ${guardianContactNullCount}`)
+        if (guardianContactReport.length > 0) console.log('    guardian_contact invalid rows:', guardianContactReport)
+        console.log(`  emergency_contact saved: ${emergencyContactSavedCount}, null: ${emergencyContactNullCount}`)
+        if (emergencyContactReport.length > 0) console.log('    emergency_contact invalid rows:', emergencyContactReport)
+        if (failedRows.length > 0) {
+          console.log('Failed rows:', failedRows)
+          toast(`${successCount} rows imported successfully. ${failedRows.length} rows failed.`, {
+            icon: '⚠️'
+          })
+        } else {
+          toast.success(`${successCount} students imported`)
+        }
+      } else {
+        const { error } = await supabase
+          .from(selectedTable)
+          .upsert(transformedData, { onConflict: undefined })
+        if (error) {
+          console.error(`Error importing to ${selectedTable}:`, error)
+          toast.error(`Failed to import to ${selectedTable}: ${error.message}`)
+        } else {
+          toast.success(`Successfully imported ${transformedData.length} records to ${selectedTable}`)
+        }
       }
     } catch (error) {
       console.error('Import error:', error)

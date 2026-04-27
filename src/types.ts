@@ -28,7 +28,13 @@ export interface Patient {
   guardian_contact?: string
   guardian_email?: string
   mother_name?: string
+  mother_first_name?: string
+  mother_middle_name?: string
+  mother_last_name?: string
   father_name?: string
+  father_first_name?: string
+  father_middle_name?: string
+  father_last_name?: string
   person_to_notify?: string
   emergency_contact?: string
   voucher_type?: string
