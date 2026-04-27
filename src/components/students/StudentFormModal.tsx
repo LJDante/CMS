@@ -152,15 +152,14 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
             <div>
               <label className="mb-1 block text-sm font-medium">Age</label>
               <input
-                type="text"
+                type="number"
                 name="age"
                 value={form.age}
                 onChange={handleFormChange}
                 className="input-field"
-                inputMode="numeric"
-                maxLength={3}
-                pattern="\d{2,3}"
-                placeholder="10-120"
+                min={1}
+                max={100}
+                placeholder="1-100"
                 required
               />
               {errors.age && <p className="text-xs text-red-600 mt-1">{errors.age}</p>}

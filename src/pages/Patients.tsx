@@ -1224,6 +1224,8 @@ export default function Patients() {
                     {isEditingPatient ? (
                       <input
                         type="number"
+                        min={1}
+                        max={100}
                         value={displayPatient?.age || ''}
                         onChange={(e) => handlePatientFieldChange('age', e.target.value ? parseInt(e.target.value) : undefined)}
                         className="input-field mt-1"

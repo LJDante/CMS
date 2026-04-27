@@ -123,9 +123,9 @@ export function useStudentForm() {
       newErrors.last_name = 'Last name is required and must be letters only'
     }
 
-    // Age - REQUIRED (2-3 digits only)
-    if (!form.age || !/^\d{2,3}$/.test(form.age) || Number(form.age) < 10 || Number(form.age) > 120) {
-      newErrors.age = 'Age is required and must be 2-3 digits (10-120)'
+    // Age - REQUIRED (1-3 digits only)
+    if (!form.age || !/^\d{1,3}$/.test(form.age) || Number(form.age) < 1 || Number(form.age) > 100) {
+      newErrors.age = 'Age is required and must be between 1 and 100'
     }
 
     // Date of birth - REQUIRED
