@@ -71,7 +71,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       >
         <div className="space-y-3 border-b border-slate-200 px-4 py-4 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <img src="/LCCBnLogo.png" alt="La Consolacion College-Biñan" className="h-11" />
+            <img src={import.meta.env.BASE_URL + 'LCCBnLogo.png'} alt="La Consolacion College-Biñan" className="h-11" />
             <div>
               <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">LCC Biñan Clinic</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">School clinic management</p>

@@ -15,11 +15,14 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[url('/LCCbinanbuildin.jpg')] bg-cover bg-center px-4">
+    <div
+      className="flex min-h-screen items-center justify-center bg-cover bg-center px-4"
+      style={{ backgroundImage: `url(${import.meta.env.BASE_URL}LCCbinanbuildin.jpg)` }}
+    >
       <div className="w-full max-w-md">
         <div className="rounded-2xl shadow-xl bg-white p-8">
           <div className="mb-8 text-center">
-            <img src="/LCCBnLogo.png" alt="La Consolacion College-Biñan" className="mx-auto mb-4 h-12" />
+            <img src={import.meta.env.BASE_URL + 'LCCBnLogo.png'} alt="La Consolacion College-Biñan" className="mx-auto mb-4 h-12" />
             <h1 className="text-2xl font-bold text-slate-900">La Consolacion College-Biñan</h1>
             <p className="mt-1 text-slate-600">Sign in to the clinic dashboard</p>
           </div>
