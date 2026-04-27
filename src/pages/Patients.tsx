@@ -379,11 +379,15 @@ export default function Patients() {
         zip_code: editedPatient.zip_code,
       }
       if (editedPatient.patient_type === 'student') {
-        updateData.education_level = editedPatient.education_level
-        updateData.grade_level = ['k-12', 'kindergarten'].includes(editedPatient.education_level || '') ? editedPatient.grade_level : null
-        updateData.section = ['k-12', 'kindergarten'].includes(editedPatient.education_level || '') ? editedPatient.section : null
-        updateData.program = ['shs', 'college'].includes(editedPatient.education_level || '') ? editedPatient.program : null
-        updateData.year_level = ['shs', 'college'].includes(editedPatient.education_level || '') ? editedPatient.year_level : null
+        const mappedEducationLevel = ['elementary', 'junior-high-school'].includes(editedPatient.education_level || '')
+          ? 'k-12'
+          : editedPatient.education_level
+
+        updateData.education_level = mappedEducationLevel
+        updateData.grade_level = ['k-12', 'kindergarten'].includes(mappedEducationLevel || '') ? editedPatient.grade_level : null
+        updateData.section = ['k-12', 'kindergarten'].includes(mappedEducationLevel || '') ? editedPatient.section : null
+        updateData.program = ['shs', 'college'].includes(mappedEducationLevel || '') ? editedPatient.program : null
+        updateData.year_level = ['shs', 'college'].includes(mappedEducationLevel || '') ? editedPatient.year_level : null
       }
 
       const { error } = await supabase
