@@ -399,6 +399,10 @@ export default function Consultations() {
                 <p>{selectedConsultation.diagnosis_result || '—'}</p>
               </div>
               <div>
+                <p className="text-xs text-slate-500">Temperature</p>
+                <p>{selectedConsultation.temperature != null ? String(selectedConsultation.temperature) : '—'}</p>
+              </div>
+              <div>
                 <p className="text-xs text-slate-500">Follow Up Date</p>
                 <p>{selectedConsultation.follow_up_date ? format(new Date(selectedConsultation.follow_up_date), 'PP') : '—'}</p>
               </div>
@@ -455,8 +459,9 @@ export default function Consultations() {
             attending_staff_name: editingConsultation.attending_staff_name || '',
             doctor_name: editingConsultation.doctor_name || '',
             blood_pressure: editingConsultation.blood_pressure || '',
-            heart_rate: editingConsultation.heart_rate ? String(editingConsultation.heart_rate) : '',
-            oxygen_saturation: editingConsultation.oxygen_saturation ? String(editingConsultation.oxygen_saturation) : '',
+            heart_rate: editingConsultation.heart_rate != null ? String(editingConsultation.heart_rate) : '',
+            oxygen_saturation: editingConsultation.oxygen_saturation != null ? String(editingConsultation.oxygen_saturation) : '',
+            temperature: editingConsultation.temperature != null ? String(editingConsultation.temperature) : '',
             height_cm: editingConsultation.height_cm ? String(editingConsultation.height_cm) : '',
             weight_kg: editingConsultation.weight_kg ? String(editingConsultation.weight_kg) : '',
             lmp: editingConsultation.lmp || '',
