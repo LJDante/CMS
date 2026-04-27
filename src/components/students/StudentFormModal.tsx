@@ -77,7 +77,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                 onChange={handleFormChange}
                 className="input-field"
                 inputMode="numeric"
-                pattern="\d{7}"
+                pattern="[0-9]{7}"
                 maxLength={7}
                 placeholder="7 digits"
                 required
@@ -199,7 +199,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                 onChange={handleFormChange}
                 className="input-field"
                 inputMode="numeric"
-                pattern="\d{11}"
+                pattern="[0-9]{11}"
                 maxLength={11}
                 placeholder="11 digits"
                 required
@@ -234,7 +234,8 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                       value={form.grade_level}
                       onChange={handleFormChange}
                       className="input-field"
-                      inputMode="numeric"
+                      inputMode={form.education_level === 'kindergarten' ? 'text' : 'numeric'}
+                      pattern="[0-9A-Za-z]{1,2}"
                       maxLength={2}
                       placeholder={form.education_level === 'kindergarten' ? 'e.g. K' : form.education_level === 'elementary' ? 'e.g. 3' : 'e.g. 8'}
                       readOnly={form.education_level === 'kindergarten'}
@@ -535,7 +536,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   onChange={handleFormChange}
                   className="input-field"
                   inputMode="numeric"
-                  pattern="\d{4}"
+                  pattern="[0-9]{4}"
                   maxLength={4}
                   placeholder="4 digits"
                 />
