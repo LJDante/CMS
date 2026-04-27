@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import RegisterStaffAccount from './RegisterStaffAccount'
-import type { ClinicVisit } from '../types'
+import type { ClinicVisit, Profile, Role } from '../types'
 import { format, addDays } from 'date-fns'
 
 interface DashboardStats {
@@ -23,12 +25,28 @@ interface RecentActivityItem {
   path: string
 }
 
+type StaffAccount = Profile & {
+  email: string
+}
+
+const ROLE_LABELS: Record<Role, string> = {
+  clinic_staff: 'Clinic Staff',
+  clinic_doctor: 'Clinic Doctor',
+  clinic_admin: 'Clinic Admin'
+}
+
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [lowStockCount, setLowStockCount] = useState<number | null>(null)
   const [pendingRequests, setPendingRequests] = useState<number | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([])
   const [patientNames, setPatientNames] = useState<Record<string, string>>({})
+  const [staffAccounts, setStaffAccounts] = useState<StaffAccount[]>([])
+  const [loadingStaffAccounts, setLoadingStaffAccounts] = useState(false)
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null)
+
+  const { profile } = useAuth()
+  const currentUser = profile
 
   useEffect(() => {
     const load = async () => {
@@ -177,7 +195,72 @@ export default function Dashboard() {
     }
   }
 
-  const { profile } = useAuth()
+  const fetchStaffAccounts = async () => {
+    setLoadingStaffAccounts(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, created_at')
+      .order('created_at', { ascending: false })
+
+    setLoadingStaffAccounts(false)
+
+    if (error) {
+      console.error('Failed to load staff accounts', error)
+      toast.error('Failed to load staff accounts')
+      setStaffAccounts([])
+      return
+    }
+
+    setStaffAccounts((data ?? []) as StaffAccount[])
+  }
+
+  const handleDeleteStaff = async (userId: string, userName: string) => {
+    if (currentUser?.role !== 'clinic_admin') {
+      toast.error('You do not have permission to perform this action')
+      return
+    }
+
+    if (currentUser?.id === userId) {
+      toast.error('You cannot delete your own account')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${userName}'s account? This action cannot be undone.`
+    )
+
+    if (!confirmed) return
+
+    setDeletingAccountId(userId)
+
+    try {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', userId)
+
+      if (profileError) throw profileError
+
+      const { error: authError } = await supabase
+        .rpc('delete_auth_user', { user_id: userId })
+
+      if (authError) throw authError
+
+      toast.success(`${userName}'s account has been deleted successfully`)
+      await fetchStaffAccounts()
+    } catch (error) {
+      console.error('Delete staff account failed', error)
+      toast.error('Failed to delete account')
+    } finally {
+      setDeletingAccountId(null)
+    }
+  }
+
+  useEffect(() => {
+    if (profile?.role === 'clinic_admin') {
+      void fetchStaffAccounts()
+    }
+  }, [profile?.role])
 
   return (
     <div className="animate-fade-in">
@@ -292,17 +375,95 @@ export default function Dashboard() {
       </div>
 
       {profile?.role === 'clinic_admin' && (
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-          <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Register staff or doctor</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Create new clinic staff accounts directly from the dashboard.
-              </p>
+        <div className="space-y-6 mt-8">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Register staff or doctor</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Create new clinic staff accounts directly from the dashboard.
+                </p>
+              </div>
             </div>
-          </div>
-          <RegisterStaffAccount hideHeader />
-        </section>
+            <RegisterStaffAccount hideHeader />
+          </section>
+
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Manage Staff Accounts</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  View all staff profiles and remove accounts when needed. Admin accounts and your own account cannot be deleted.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={loadingStaffAccounts}
+                onClick={() => void fetchStaffAccounts()}
+              >
+                {loadingStaffAccounts ? 'Refreshing...' : 'Refresh list'}
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              {loadingStaffAccounts ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                  Loading staff accounts...
+                </div>
+              ) : staffAccounts.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                  No staff accounts are available yet.
+                </div>
+              ) : (
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 font-medium text-slate-500">Full Name</th>
+                      <th className="px-4 py-3 font-medium text-slate-500">Email</th>
+                      <th className="px-4 py-3 font-medium text-slate-500">Role</th>
+                      <th className="px-4 py-3 font-medium text-slate-500">Date Created</th>
+                      <th className="px-4 py-3 font-medium text-slate-500">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {staffAccounts.map((account) => {
+                      const canDelete = account.id !== profile.id && account.role !== 'clinic_admin'
+                      const formattedDate = new Date(account.created_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })
+                      return (
+                        <tr key={account.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
+                          <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{account.full_name}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{account.email}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{ROLE_LABELS[account.role]}</td>
+                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{formattedDate}</td>
+                          <td className="px-4 py-3">
+                            {canDelete ? (
+                              <button
+                                type="button"
+                                className="btn-danger btn-xs inline-flex items-center gap-2"
+                                onClick={() => void handleDeleteStaff(account.id, account.full_name)}
+                                disabled={deletingAccountId === account.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                {deletingAccountId === account.id ? 'Deleting...' : 'Delete'}
+                              </button>
+                            ) : (
+                              <span className="text-sm text-slate-400">Not removable</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </section>
+        </div>
       )}
     </div>
   )
