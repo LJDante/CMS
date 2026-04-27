@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import type { Student, ClinicVisit } from '../types.ts'
+import type { EducationLevel } from '../types/students'
 import { Search, Eye, X, Edit2, Check, Trash2, Download, X as XIcon, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
@@ -31,7 +32,8 @@ export default function Patients() {
   // Edit patient info states
   const [isEditingPatient, setIsEditingPatient] = useState(false)
   const [isSavingPatient, setIsSavingPatient] = useState(false)
-  const [editedPatient, setEditedPatient] = useState<Partial<Student> | null>(null)
+  type EditablePatient = Partial<Student> & { education_level?: EducationLevel }
+  const [editedPatient, setEditedPatient] = useState<EditablePatient | null>(null)
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
