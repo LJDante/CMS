@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// https://vitejs.dev
 export default defineConfig({
+  base: '/CMS/',
   plugins: [react()],
-  base: 'https://github.com/LJDante/CMS', // <-- ADD THIS LINE (Replace with your actual repo name)
 })
