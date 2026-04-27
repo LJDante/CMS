@@ -136,8 +136,8 @@ export function StudentList({ students, search, onSearchChange, onViewDetails }:
   })
 
   const levelDisplay = (s: Student) => {
-    if (s.education_level === 'shs' && s.program && s.year_level) {
-      return `${s.program}-${s.year_level}`
+    if (s.education_level === 'shs' && s.program && (s.grade_level || s.year_level)) {
+      return `${s.program}-${s.grade_level || s.year_level}`
     }
     if (s.education_level === 'college' && s.program && s.year_level) {
       return `${s.program}-${s.year_level}`

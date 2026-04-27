@@ -258,22 +258,6 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
               {form.education_level === 'shs' && (
                 <>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">SHS track</label>
-                    <select
-                      name="shs_track"
-                      value={form.shs_track}
-                      onChange={handleFormChange}
-                      className="input-field"
-                    >
-                      {shsTracks.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.shs_track && <p className="text-xs text-red-600 mt-1">{errors.shs_track}</p>}
-                  </div>
-                  <div>
                     <label className="mb-1 block text-sm font-medium">Grade</label>
                     <select
                       name="shs_grade"
@@ -281,11 +265,29 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                       onChange={handleFormChange}
                       className="input-field"
                     >
+                      <option value="">Select SHS Grade</option>
                       <option value="11">11</option>
                       <option value="12">12</option>
                     </select>
                     {errors.shs_grade && <p className="text-xs text-red-600 mt-1">{errors.shs_grade}</p>}
                   </div>
+                  {['11', '12'].includes(form.shs_grade) && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">SHS Track</label>
+                      <select
+                        name="shs_track"
+                        value={form.shs_track}
+                        onChange={handleFormChange}
+                        className="input-field"
+                      >
+                        <option value="">Select SHS Track</option>
+                        <option value="ABM">ABM</option>
+                        <option value="HUMSS">HUMSS</option>
+                        <option value="STEM">STEM</option>
+                      </select>
+                      {errors.shs_track && <p className="text-xs text-red-600 mt-1">{errors.shs_track}</p>}
+                    </div>
+                  )}
                 </>
               )}
               {form.education_level === 'college' && (

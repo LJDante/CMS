@@ -328,7 +328,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                     </div>
                     <div>
                       <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                      <p className="text-sm mt-1">{student.year_level || 'N/A'}</p>
+                      <p className="text-sm mt-1">{student.grade_level || student.year_level || 'N/A'}</p>
                     </div>
                   </>
                 )}

@@ -14,9 +14,13 @@ interface NotesModalProps {
 export function NotesModal({ consultationId, notes, loading, onAddNote, onClose }: NotesModalProps) {
   const [newNote, setNewNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
+  const [noteError, setNoteError] = useState<string | null>(null)
 
   const handleAddNote = async () => {
-    if (!newNote.trim()) return
+    if (!newNote.trim()) {
+      setNoteError('Please enter a note before saving')
+      return
+    }
 
     setAddingNote(true)
     try {
@@ -51,7 +55,10 @@ export function NotesModal({ consultationId, notes, loading, onAddNote, onClose 
                 className="input-field flex-1"
                 rows={3}
                 value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
+                onChange={(e) => {
+                  setNewNote(e.target.value)
+                  setNoteError(null)
+                }}
                 placeholder="Enter your note..."
                 disabled={addingNote}
               />
@@ -63,6 +70,7 @@ export function NotesModal({ consultationId, notes, loading, onAddNote, onClose 
                 <Plus className="h-4 w-4" />
               </button>
             </div>
+            {noteError && <p className="text-xs text-red-600 mt-2">{noteError}</p>}
           </div>
 
           {/* Notes List */}

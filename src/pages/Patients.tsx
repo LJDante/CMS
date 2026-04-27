@@ -32,7 +32,7 @@ export default function Patients() {
   // Edit patient info states
   const [isEditingPatient, setIsEditingPatient] = useState(false)
   const [isSavingPatient, setIsSavingPatient] = useState(false)
-  type EditablePatient = Partial<Student> & { education_level?: EducationLevel }
+  type EditablePatient = Omit<Student, 'education_level'> & { education_level?: EducationLevel; shs_track?: string }
   const [editedPatient, setEditedPatient] = useState<EditablePatient | null>(null)
   const [editErrors, setEditErrors] = useState<Record<string, string>>({})
   const [selectedProvince, setSelectedProvince] = useState('')
@@ -253,7 +253,7 @@ export default function Patients() {
     setIsEditingPatient(false)
   }
 
-  const handlePatientFieldChange = (field: keyof Student, value: any) => {
+  const handlePatientFieldChange = (field: keyof Student | 'shs_track', value: any) => {
     if (field === 'contact_number' || field === 'guardian_contact' || field === 'emergency_contact') {
       value = value.replace(/\D/g, '').slice(0, 11)
     }
@@ -264,11 +264,20 @@ export default function Patients() {
       value = value.replace(/[^0-9]/g, '').slice(0, 2)
     }
     if (field === 'education_level') {
-      setEditedPatient(prev => prev ? {
-        ...prev,
-        education_level: value,
-        grade_level: value === 'kindergarten' ? 'K' : ''
-      } : null)
+      setEditedPatient(prev => prev ? (() => {
+        const isSameEducation = prev.education_level === value
+        const nextEducation = value as EducationLevel
+
+        return {
+          ...prev,
+          education_level: nextEducation,
+          grade_level: nextEducation === 'kindergarten' ? 'K' : isSameEducation ? prev.grade_level : '',
+          section: ['kindergarten', 'elementary', 'junior-high-school'].includes(nextEducation) ? (isSameEducation ? prev.section : '') : '',
+          shs_track: nextEducation === 'shs' ? (isSameEducation ? prev.shs_track : '') : '',
+          year_level: nextEducation === 'college' ? (isSameEducation ? prev.year_level : '') : '',
+          program: nextEducation === 'college' ? (isSameEducation ? prev.program : '') : ''
+        }
+      })() : null)
     } else if (field === 'sex' && value === 'F') {
       setEditedPatient(prev => prev ? { ...prev, sex: value, suffix: undefined } : null)
     } else {
@@ -340,6 +349,31 @@ export default function Patients() {
       errors.father_name = 'Name must contain letters only'
     }
 
+    if (editedPatient.patient_type === 'student') {
+      const level = editedPatient.education_level
+      if (['kindergarten', 'k-12', 'shs'].includes(level || '')) {
+        if (!editedPatient.grade_level) {
+          errors.grade_level = 'Grade level is required'
+        }
+      }
+      if (level === 'shs') {
+        if (!['11', '12'].includes(editedPatient.grade_level || '')) {
+          errors.grade_level = 'SHS grade must be 11 or 12'
+        }
+        if (!editedPatient.shs_track) {
+          errors.shs_track = 'SHS track is required'
+        }
+      }
+      if (level === 'college') {
+        if (!editedPatient.program) {
+          errors.program = 'Program is required'
+        }
+        if (!editedPatient.year_level) {
+          errors.year_level = 'Year level is required'
+        }
+      }
+    }
+
     setEditErrors(errors)
     return errors
   }
@@ -359,6 +393,7 @@ export default function Patients() {
         first_name: editedPatient.first_name,
         middle_name: editedPatient.middle_name,
         last_name: editedPatient.last_name,
+        sex: editedPatient.sex === 'M' ? 'M' : editedPatient.sex === 'F' ? 'F' : null,
         age: editedPatient.age,
         date_of_birth: editedPatient.date_of_birth,
         contact_number: editedPatient.contact_number,
@@ -386,10 +421,11 @@ export default function Patients() {
           : editedPatient.education_level
 
         updateData.education_level = mappedEducationLevel
-        updateData.grade_level = ['k-12', 'kindergarten'].includes(mappedEducationLevel || '') ? editedPatient.grade_level : null
+        updateData.grade_level = ['k-12', 'kindergarten', 'shs'].includes(mappedEducationLevel || '') ? editedPatient.grade_level : null
         updateData.section = ['k-12', 'kindergarten'].includes(mappedEducationLevel || '') ? editedPatient.section : null
-        updateData.program = ['shs', 'college'].includes(mappedEducationLevel || '') ? editedPatient.program : null
-        updateData.year_level = ['shs', 'college'].includes(mappedEducationLevel || '') ? editedPatient.year_level : null
+        updateData.shs_track = mappedEducationLevel === 'shs' ? editedPatient.shs_track : null
+        updateData.year_level = mappedEducationLevel === 'college' ? editedPatient.year_level : null
+        updateData.program = mappedEducationLevel === 'college' ? editedPatient.program : null
       }
 
       const { error } = await supabase
@@ -417,7 +453,9 @@ export default function Patients() {
     }
   }
 
-  const displayPatient = isEditingPatient ? editedPatient : selectedPatient
+  const displayPatient: Student | EditablePatient | null = isEditingPatient ? editedPatient : selectedPatient
+  const displayEditablePatient = displayPatient as EditablePatient | null
+  const displayEducationLevel: EducationLevel | undefined = displayPatient?.education_level as EducationLevel | undefined
 
   // Update selected province when displayPatient changes
   useEffect(() => {
@@ -493,8 +531,8 @@ export default function Patients() {
   })
 
   const levelDisplay = (s: Student) => {
-    if (s.education_level === 'shs' && s.program && s.year_level) {
-      return `${s.program}-${s.year_level}`
+    if (s.education_level === 'shs' && s.program && (s.grade_level || s.year_level)) {
+      return `${s.program}-${s.grade_level || s.year_level}`
     }
     if (s.education_level === 'college' && s.program && s.year_level) {
       return `${s.program}-${s.year_level}`
@@ -1187,15 +1225,16 @@ export default function Patients() {
                     <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Sex</label>
                     {isEditingPatient ? (
                       <select
-                        value={displayPatient?.sex || 'M'}
+                        value={displayPatient?.sex || ''}
                         onChange={(e) => handlePatientFieldChange('sex', e.target.value)}
                         className="input-field mt-1"
                       >
+                        <option value="">Select Sex</option>
                         <option value="M">Male</option>
                         <option value="F">Female</option>
                       </select>
                     ) : (
-                      <p className="text-sm mt-1">{displayPatient?.sex === 'M' ? 'Male' : 'Female'}</p>
+                      <p className="text-sm mt-1">{displayPatient?.sex === 'M' ? 'Male' : displayPatient?.sex === 'F' ? 'Female' : 'N/A'}</p>
                     )}
                   </div>
                   <div>
@@ -1289,19 +1328,42 @@ export default function Patients() {
                             <option value="college">College</option>
                           </select>
                         </div>
-                        {(displayPatient?.education_level === 'elementary' || displayPatient?.education_level === 'junior-high-school' || displayPatient?.education_level === 'kindergarten') && (
+                        {(displayEducationLevel === 'elementary' || displayEducationLevel === 'junior-high-school' || displayEducationLevel === 'kindergarten') && (
                           <>
                             <div>
                               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
-                              <input
-                                type="text"
-                                value={displayPatient?.grade_level || ''}
-                                onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
-                                className="input-field mt-1"
-                                placeholder={displayPatient?.education_level === 'kindergarten' ? 'e.g. K' : displayPatient?.education_level === 'elementary' ? 'e.g. 3' : 'e.g. 8'}
-                                readOnly={displayPatient?.education_level === 'kindergarten'}
-                                aria-readonly={displayPatient?.education_level === 'kindergarten'}
-                              />
+                              {displayEducationLevel === 'kindergarten' ? (
+                                <input
+                                  type="text"
+                                  value={displayPatient?.grade_level || 'K'}
+                                  readOnly
+                                  aria-readonly="true"
+                                  className="input-field mt-1"
+                                />
+                              ) : (
+                                <select
+                                  name="grade_level"
+                                  value={displayPatient?.grade_level || ''}
+                                  onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
+                                  className="input-field mt-1"
+                                >
+                                  <option value="">Select Grade Level</option>
+                                  <optgroup label="Elementary">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                  </optgroup>
+                                  <optgroup label="Junior High School">
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                  </optgroup>
+                                </select>
+                              )}
                               {editErrors.grade_level && <p className="text-xs text-red-600 mt-1">{editErrors.grade_level}</p>}
                             </div>
                             <div>
@@ -1316,47 +1378,69 @@ export default function Patients() {
                             </div>
                           </>
                         )}
-                        {displayPatient?.education_level === 'shs' && (
+                        {displayEducationLevel === 'shs' && (
                           <>
                             <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                              <input
-                                type="text"
-                                value={displayPatient?.program || ''}
-                                onChange={(e) => handlePatientFieldChange('program', e.target.value)}
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
+                              <select
+                                name="grade_level"
+                                value={displayPatient?.grade_level || ''}
+                                onChange={(e) => handlePatientFieldChange('grade_level', e.target.value)}
                                 className="input-field mt-1"
-                              />
+                              >
+                                <option value="">Select SHS Grade</option>
+                                <option value="11">11</option>
+                                <option value="12">12</option>
+                              </select>
+                              {editErrors.grade_level && <p className="text-xs text-red-600 mt-1">{editErrors.grade_level}</p>}
                             </div>
-                            <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                              <input
-                                type="text"
-                                value={displayPatient?.year_level || ''}
-                                onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
-                                className="input-field mt-1"
-                              />
-                            </div>
+                            {['11', '12'].includes(displayPatient?.grade_level || '') && (
+                              <div>
+                                <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
+                                <select
+                                  name="shs_track"
+                                  value={displayEditablePatient?.shs_track || ''}
+                                  onChange={(e) => handlePatientFieldChange('shs_track', e.target.value)}
+                                  className="input-field mt-1"
+                                >
+                                  <option value="">Select SHS Track</option>
+                                  <option value="ABM">ABM</option>
+                                  <option value="HUMSS">HUMSS</option>
+                                  <option value="STEM">STEM</option>
+                                </select>
+                                {editErrors.shs_track && <p className="text-xs text-red-600 mt-1">{editErrors.shs_track}</p>}
+                              </div>
+                            )}
                           </>
                         )}
-                        {displayPatient?.education_level === 'college' && (
+                        {displayEducationLevel === 'college' && (
                           <>
                             <div>
-                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Course</label>
+                              <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Program</label>
                               <input
                                 type="text"
                                 value={displayPatient?.program || ''}
                                 onChange={(e) => handlePatientFieldChange('program', e.target.value)}
                                 className="input-field mt-1"
+                                placeholder="e.g. BSCS"
                               />
+                              {editErrors.program && <p className="text-xs text-red-600 mt-1">{editErrors.program}</p>}
                             </div>
                             <div>
                               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Year Level</label>
-                              <input
-                                type="text"
+                              <select
+                                name="year_level"
                                 value={displayPatient?.year_level || ''}
                                 onChange={(e) => handlePatientFieldChange('year_level', e.target.value)}
                                 className="input-field mt-1"
-                              />
+                              >
+                                <option value="">Select Year Level</option>
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                              </select>
+                              {editErrors.year_level && <p className="text-xs text-red-600 mt-1">{editErrors.year_level}</p>}
                             </div>
                           </>
                         )}
@@ -1383,11 +1467,11 @@ export default function Patients() {
                           <>
                             <div>
                               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">SHS Track</label>
-                              <p className="text-sm mt-1">{selectedPatient.program || 'N/A'}</p>
+                              <p className="text-sm mt-1">{selectedPatient.shs_track || 'N/A'}</p>
                             </div>
                             <div>
                               <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade</label>
-                              <p className="text-sm mt-1">{selectedPatient.year_level || 'N/A'}</p>
+                              <p className="text-sm mt-1">{selectedPatient.grade_level || 'N/A'}</p>
                             </div>
                           </>
                         )}

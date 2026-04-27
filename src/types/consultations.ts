@@ -17,6 +17,14 @@ export interface ConsultationFormData {
   temperature: string | number | null
   height_cm: string | number | null
   weight_kg: string | number | null
+  patient_id: string
+  patient_external_id?: string
+  patient_name: string
+  patient_type: 'student' | 'personnel'
+  grade_level?: string
+  section?: string
+  year_level?: string
+  course?: string
   lmp: string | null
   medicines: string
   status: 'pending' | 'completed' | 'follow_up' | 'cancelled'

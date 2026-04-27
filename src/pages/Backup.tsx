@@ -193,6 +193,11 @@ export function Backup() {
           if (middleNameIndex !== -1) {
             sampleRow[middleNameIndex] = 'A'
           }
+
+          const sexIndex = headers.indexOf('Sex')
+          if (sexIndex !== -1) {
+            sampleRow[sexIndex] = 'M'
+          }
         }
         XLSX.utils.sheet_add_aoa(ws, [sampleRow], { origin: 1 })
       }
@@ -386,6 +391,11 @@ export function Backup() {
           const patientTypeValue = String(row['Patient Type'] || '').trim() || null
           const defaultPatientType = patientUploadCategory === 'personnel' ? 'personnel' : 'student'
 
+          const sexInput = String(row['Sex'] || '').trim().toUpperCase()
+          const sex = sexInput === 'M' || sexInput === 'MALE' ? 'M'
+            : sexInput === 'F' || sexInput === 'FEMALE' ? 'F'
+            : null
+
           const transformedRow = {
             patient_id: studentId.padStart(7, '0'),
             grade_level,
@@ -409,7 +419,7 @@ export function Backup() {
             city: null,
             province: null,
             zip_code: null,
-            sex: null,
+            sex,
             // SHS fields
             shs_track: education_level === 'shs' ? shs_track : null,
             // College fields

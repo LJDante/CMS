@@ -1,10 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// https://vitejs.dev
 export default defineConfig({
   plugins: [react()],
-  server: {
-    port: 5173
-  }
+  base: 'https://github.com/LJDante/CMS', // <-- ADD THIS LINE (Replace with your actual repo name)
 })
-

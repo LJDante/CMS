@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Download, Search, Loader2, Eye, Edit2, Trash2, MessageSquare } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../contexts/AuthContext'
 import type { Patient, Consultation, ConsultationNote } from '../types'
 import { ConsultationForm, NotesModal } from '../components/consultations'
 import * as XLSX from 'xlsx'
@@ -21,6 +22,7 @@ export default function Consultations() {
   const [editingConsultation, setEditingConsultation] = useState<Consultation | null>(null)
   const [notes, setNotes] = useState<ConsultationNote[]>([])
   const [notesLoading, setNotesLoading] = useState(false)
+  const { profile } = useAuth()
 
   useEffect(() => {
     const loadData = async () => {
@@ -85,18 +87,31 @@ export default function Consultations() {
   }
 
   const addNote = async (consultationId: string, content: string) => {
+    if (!profile?.id) {
+      const errorMessage = 'Unable to save note: no authenticated user found.'
+      console.error(errorMessage)
+      toast.error('Failed to save note')
+      throw new Error(errorMessage)
+    }
+
     try {
       const { data, error } = await supabase
         .from('consultation_notes')
-        .insert({ consultation_id: consultationId, content })
+        .insert({ consultation_id: consultationId, note_text: content, created_by: profile.id })
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Failed to insert consultation note', error)
+        throw error
+      }
+
       setNotes(prev => [data as ConsultationNote, ...prev])
-      toast.success('Note added successfully')
+      await loadNotes(consultationId)
+      toast.success('Note saved successfully')
     } catch (error) {
-      toast.error('Failed to add note')
+      console.error('Failed to add note', error)
+      toast.error('Failed to save note')
       throw error
     }
   }
@@ -422,6 +437,14 @@ export default function Consultations() {
       {showForm && (
         <ConsultationForm
           initialData={editingConsultation ? {
+            patient_id: editingConsultation.patient_id,
+            patient_external_id: editingConsultation.patient_external_id,
+            patient_name: editingConsultation.patient_name,
+            patient_type: editingConsultation.patient_type,
+            grade_level: editingConsultation.grade_level || '',
+            section: editingConsultation.section || '',
+            year_level: editingConsultation.year_level || '',
+            course: editingConsultation.course || '',
             reason: editingConsultation.reason || '',
             intervention: editingConsultation.intervention || '',
             actions_taken: editingConsultation.actions_taken || '',
@@ -443,6 +466,7 @@ export default function Consultations() {
           onSubmit={editingConsultation ? handleUpdateConsultation : handleAddConsultation}
           onCancel={handleCloseForm}
           isEditing={!!editingConsultation}
+          patient={editingConsultation ? patients.find((p) => p.id === editingConsultation.patient_id) : undefined}
         />
       )}
 

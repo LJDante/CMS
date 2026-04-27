@@ -17,8 +17,8 @@ export function useStudentForm() {
     grade_level: '',
     section: '',
     education_level: 'elementary',
-    shs_track: 'ABM',
-    shs_grade: '11',
+    shs_track: '',
+    shs_grade: '',
     college_course: 'BSCS',
     college_year: '1',
     contact_number: '',
@@ -60,7 +60,7 @@ export function useStudentForm() {
   // probe for missing columns once
   useEffect(() => {
     const probe = async () => {
-      const colsToCheck = ['patient_id', 'age', 'date_of_birth', 'education_level', 'guardian_email', 'address_field', 'barangay', 'city', 'province', 'zip_code', 'middle_name', 'patient_type', 'program', 'year_level', 'suffix', 'father_suffix']
+      const colsToCheck = ['patient_id', 'age', 'date_of_birth', 'education_level', 'guardian_email', 'address_field', 'barangay', 'city', 'province', 'zip_code', 'middle_name', 'patient_type', 'program', 'year_level', 'shs_track', 'suffix', 'father_suffix']
       const missing: Record<string, boolean> = {}
       for (const col of colsToCheck) {
         const { error } = await supabase.from('patients').select(col).limit(1)
@@ -140,9 +140,9 @@ export function useStudentForm() {
 
     // Address field is optional; barangay/city/province/zip are separate fields.
 
-    // Grade level is required for K-12 and Kindergarten students
-    if (form.patient_type === 'student' && (form.education_level === 'kindergarten' || form.education_level === 'k-12') && !form.grade_level) {
-      newErrors.grade_level = 'Grade level is required for K-12 and Kindergarten education'
+    // Grade level is required for Kindergarten, K-12, Elementary, and Junior High students
+    if (form.patient_type === 'student' && ['kindergarten', 'k-12', 'elementary', 'junior-high-school'].includes(form.education_level) && !form.grade_level) {
+      newErrors.grade_level = 'Grade level is required for K-12, Kindergarten, and Elementary education'
     }
     // Grade level validation
     if (form.patient_type === 'student' && form.education_level === 'kindergarten' && form.grade_level && !/^[Kk]?\d{0,2}$/.test(form.grade_level)) {
@@ -151,14 +151,18 @@ export function useStudentForm() {
     if (form.patient_type === 'student' && form.education_level === 'elementary' && form.grade_level && !/^[1-6]$/.test(form.grade_level)) {
       newErrors.grade_level = 'Grade level must be 1-6 for Elementary'
     }
-    if (form.patient_type === 'student' && form.education_level === 'k-12' && form.grade_level && !/^(7|8|9|10)$/.test(form.grade_level)) {
+    if (form.patient_type === 'student' && form.education_level === 'junior-high-school' && form.grade_level && !/^(7|8|9|10)$/.test(form.grade_level)) {
       newErrors.grade_level = 'Grade level must be 7-10 for Junior High School'
     }
 
     // Require additional fields for SHS and College students
     if (form.patient_type === 'student' && form.education_level === 'shs') {
-      if (!form.shs_track) newErrors.shs_track = 'SHS track is required'
-      if (!form.shs_grade) newErrors.shs_grade = 'SHS grade is required'
+      if (!form.shs_grade || !['11', '12'].includes(form.shs_grade)) {
+        newErrors.shs_grade = 'SHS grade is required and must be 11 or 12'
+      }
+      if (['11', '12'].includes(form.shs_grade) && !form.shs_track) {
+        newErrors.shs_track = 'SHS track is required'
+      }
     }
     if (form.patient_type === 'student' && form.education_level === 'college') {
       if (!form.college_course) newErrors.college_course = 'College course is required'
@@ -299,18 +303,38 @@ export function useStudentForm() {
       return
     }
 
-    // Education level changes — auto-fill kindergarten grade and clear dependent errors
+    // Education level changes — auto-fill kindergarten grade and clear dependent fields
     if (name === 'education_level') {
       setForm((f) => ({
         ...f,
         education_level: value as EducationLevel,
-        grade_level: value === 'kindergarten' ? 'K' : ''
+        grade_level: value === 'kindergarten' ? 'K' : '',
+        section: '',
+        shs_track: value === 'shs' ? f.shs_track : '',
+        shs_grade: value === 'shs' ? f.shs_grade : '',
+        college_course: value === 'college' ? f.college_course : '',
+        college_year: value === 'college' ? f.college_year : ''
       }))
       clearError('grade_level')
       clearError('shs_track')
       clearError('shs_grade')
       clearError('college_course')
       clearError('college_year')
+      return
+    }
+
+    if (name === 'shs_grade') {
+      let grade = value.replace(/\D/g, '').slice(0, 2)
+      if (grade && !['11', '12'].includes(grade)) {
+        grade = ''
+      }
+      setForm((f) => ({
+        ...f,
+        shs_grade: grade,
+        shs_track: ['11', '12'].includes(grade) ? f.shs_track : ''
+      }))
+      clearError('shs_grade')
+      clearError('shs_track')
       return
     }
 
@@ -367,14 +391,15 @@ export function useStudentForm() {
       let grade_level: string | null = null
       let program: string | null = null
       let year_level: string | null = null
+      let shs_track: string | null = null
 
       education_level = mapEducationLevel(education_level)
       if (isStudent) {
         if (education_level === 'k-12' || education_level === 'kindergarten') {
           grade_level = form.grade_level || null
         } else if (education_level === 'shs') {
-          program = form.shs_track
-          year_level = form.shs_grade
+          grade_level = form.shs_grade || null
+          shs_track = form.shs_track || null
         } else if (education_level === 'college') {
           program = form.college_course
           year_level = form.college_year
@@ -416,6 +441,7 @@ export function useStudentForm() {
       if (!missingColumns.father_suffix) payload.father_suffix = form.father_suffix || null
       if (!missingColumns.program) payload.program = program
       if (!missingColumns.year_level) payload.year_level = year_level
+      if (!missingColumns.shs_track) payload.shs_track = shs_track
 
       // Ensure grade_level is at least an empty string to avoid NOT NULL DB failures in some schemas
       if (payload.grade_level == null) payload.grade_level = ''

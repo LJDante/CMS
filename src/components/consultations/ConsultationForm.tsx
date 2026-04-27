@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { ConsultationFormData } from '../../types/consultations'
 import type { Patient } from '../../types'
 import { CONSULTATION_STATUS_OPTIONS } from '../../constants'
+import { supabase } from '../../lib/supabaseClient'
 
 const formatForDatetimeLocal = (value: string | null | undefined): string => {
   if (!value) return ''
@@ -34,6 +35,14 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
     const followUpDate = formatForDatetimeLocal(initialData?.follow_up_date) || null
 
     return {
+      patient_id: initialData?.patient_id || '',
+      patient_external_id: initialData?.patient_external_id || '',
+      patient_name: initialData?.patient_name || '',
+      patient_type: initialData?.patient_type || 'student',
+      grade_level: initialData?.grade_level || '',
+      section: initialData?.section || '',
+      year_level: initialData?.year_level || '',
+      course: initialData?.course || '',
       reason: '',
       intervention: '',
       actions_taken: '',
@@ -56,23 +65,104 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
     }
   })
 
+  const [patients, setPatients] = useState<Patient[]>([])
+  const [patientSearch, setPatientSearch] = useState('')
+  const [filteredPatients, setFilteredPatients] = useState<Patient[]>([])
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(patient || null)
+  const [patientError, setPatientError] = useState<string | null>(null)
+  const [loadingPatients, setLoadingPatients] = useState(false)
+
+  useEffect(() => {
+    setSelectedPatient(patient || null)
+  }, [patient])
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      setLoadingPatients(true)
+      try {
+        const { data, error } = await supabase
+          .from('patients')
+          .select('id,patient_id,patient_type,first_name,middle_name,last_name,grade_level,section,year_level,program,sex')
+
+        if (error) throw error
+        setPatients((data ?? []) as Patient[])
+      } catch (err) {
+        console.error('Failed to load patients', err)
+      } finally {
+        setLoadingPatients(false)
+      }
+    }
+
+    void loadPatients()
+  }, [])
+
+  useEffect(() => {
+    const term = patientSearch.trim().toLowerCase()
+    if (!term) {
+      setFilteredPatients([])
+      return
+    }
+
+    setFilteredPatients(
+      patients.filter((p) => {
+        const fullName = `${p.first_name} ${p.middle_name ? `${p.middle_name} ` : ''}${p.last_name}`.trim().toLowerCase()
+        return fullName.includes(term) || p.patient_id.toLowerCase().includes(term)
+      })
+    )
+  }, [patientSearch, patients])
+
+  useEffect(() => {
+    if (!selectedPatient) return
+
+    setForm((current) => ({
+      ...current,
+      patient_id: selectedPatient.id,
+      patient_external_id: selectedPatient.patient_id,
+      patient_name: `${selectedPatient.first_name} ${selectedPatient.middle_name ? `${selectedPatient.middle_name} ` : ''}${selectedPatient.last_name}`.trim(),
+      patient_type: selectedPatient.patient_type,
+      grade_level: selectedPatient.grade_level || '',
+      section: selectedPatient.section || '',
+      year_level: selectedPatient.year_level || '',
+      course: selectedPatient.program || '',
+    }))
+  }, [selectedPatient])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
+    if (!form.patient_id) {
+      setPatientError('Please select a patient')
+      return
+    }
+
     const submitData = {
-      ...form,
-      // We send the datetime-local string directly for timestamp without time zone storage
+      patient_id: form.patient_id,
+      patient_type: form.patient_type,
+      patient_name: form.patient_name,
+      grade_level: form.grade_level || undefined,
+      section: form.section || undefined,
+      course: form.course || undefined,
+      year_level: form.year_level || undefined,
+      reason: form.reason,
+      intervention: form.intervention,
+      actions_taken: form.actions_taken,
+      doctors_remarks: form.doctors_remarks,
+      diagnosis_result: form.diagnosis_result,
       consultation_date: form.consultation_date,
       follow_up_date: form.follow_up_date || null,
-      // Convert numeric fields properly and preserve 0 values
+      attending_staff_name: form.attending_staff_name,
+      doctor_name: form.doctor_name,
+      blood_pressure: form.blood_pressure,
       heart_rate: form.heart_rate !== '' ? parseInt(String(form.heart_rate), 10) : null,
       oxygen_saturation: form.oxygen_saturation !== '' ? parseFloat(String(form.oxygen_saturation)) : null,
       temperature: form.temperature !== '' ? parseFloat(String(form.temperature)) : null,
       height_cm: form.height_cm !== '' ? parseFloat(String(form.height_cm)) : null,
       weight_kg: form.weight_kg !== '' ? parseFloat(String(form.weight_kg)) : null,
-      lmp: form.lmp || null
-    }
-    
+      lmp: form.lmp || null,
+      medicines: form.medicines,
+      status: form.status || 'pending'
+    } as ConsultationFormData
+
     await onSubmit(submitData)
   }
 
@@ -85,6 +175,63 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Patient</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={patientSearch}
+                  onChange={(e) => {
+                    setPatientSearch(e.target.value)
+                    setPatientError(null)
+                  }}
+                  placeholder="Search by name or patient ID"
+                />
+                {patientError && <p className="text-xs text-red-600 mt-1">{patientError}</p>}
+              </div>
+
+              {loadingPatients && (
+                <p className="text-sm text-slate-500">Loading patients...</p>
+              )}
+
+              {patientSearch.trim() && !loadingPatients && (
+                <div className="space-y-1 rounded-xl border border-slate-200 bg-slate-50 p-2 max-h-64 overflow-y-auto">
+                  {filteredPatients.length > 0 ? (
+                    filteredPatients.map((p) => {
+                      const fullName = `${p.first_name} ${p.middle_name ? `${p.middle_name} ` : ''}${p.last_name}`.trim()
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          className="w-full rounded-lg px-3 py-2 text-left hover:bg-slate-100"
+                          onClick={() => {
+                            setSelectedPatient(p)
+                            setPatientSearch('')
+                          }}
+                        >
+                          <div className="font-medium text-slate-800">{fullName}</div>
+                          <div className="text-sm text-slate-500">ID: {p.patient_id}</div>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <p className="text-sm text-slate-500 px-3 py-2">No patients found.</p>
+                  )}
+                </div>
+              )}
+
+              {selectedPatient && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide">Selected Patient</p>
+                  <p className="mt-1 text-base font-semibold text-slate-800">
+                    {selectedPatient.first_name} {selectedPatient.middle_name ? `${selectedPatient.middle_name} ` : ''}{selectedPatient.last_name}
+                  </p>
+                  <p className="text-sm text-slate-600">ID: {selectedPatient.patient_id}</p>
+                </div>
+              )}
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Consultation Date & Time</label>
@@ -275,7 +422,7 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
                 </div>
               </div>
 
-              {patient?.sex === 'F' && (
+              {(selectedPatient?.sex === 'F' || patient?.sex === 'F') && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium mb-1">Last Menstrual Period (LMP)</label>
                   <input

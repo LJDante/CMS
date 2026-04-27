@@ -52,16 +52,16 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
                 </td>
                 <td className="px-4 py-3">{item.name}</td>
                 <td className="px-4 py-3 capitalize">{item.category}</td>
-                <td className="px-4 py-3">{item.quantity_on_hand}</td>
-                <td className="px-4 py-3">{item.unit}</td>
                 <td className="px-4 py-3">
-                  {item.reorder_level ?? '—'}
+                  {item.quantity_on_hand}
                   {item.reorder_level && item.quantity_on_hand <= item.reorder_level && (
                     <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
                       Low stock
                     </span>
                   )}
                 </td>
+                <td className="px-4 py-3">{item.unit}</td>
+                <td className="px-4 py-3">{item.reorder_level ?? '—'}</td>
                 <td className="px-4 py-3 flex gap-2">
                   <button
                     onClick={() => onEdit(item)}

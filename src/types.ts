@@ -20,6 +20,7 @@ export interface Patient {
   education_level?: 'kindergarten' | 'k-12' | 'shs' | 'college' | 'n/a'
   program?: string
   year_level?: string
+  shs_track?: string
   date_of_birth?: string
   sex: 'M' | 'F'
   contact_number?: string
