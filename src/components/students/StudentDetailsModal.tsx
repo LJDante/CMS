@@ -789,7 +789,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                   value={displayData?.voucher_type || ''}
                   onChange={(e) => handleFieldChange('voucher_type', e.target.value)}
                   className="input-field mt-1"
-                  placeholder="e.g., None, PWD, Senior Citizen, etc."
+                  placeholder="e.g., ESC, Private, Public"
                 />
               ) : (
                 <p className="text-sm mt-1">{displayData?.voucher_type || 'N/A'}</p>

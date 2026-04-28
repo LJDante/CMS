@@ -536,7 +536,7 @@ export function StudentFormModal({ isOpen, onClose, onSuccess }: StudentFormModa
                   value={form.voucher_type}
                   onChange={handleFormChange}
                   className="input-field"
-                  placeholder="e.g., None, PWD, Senior Citizen, etc."
+                  placeholder="e.g., ESC, Private, Public"
                 />
               </div>
             </div>
