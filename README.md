@@ -35,6 +35,32 @@ VITE_SUPABASE_URL=your-supabase-project-url
 VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 ```
 
+## Supabase validation tests
+
+The repository includes a small validation script to confirm the following tables can be queried and receive test inserts:
+
+- `profiles`
+- `patients`
+- `medical_records`
+- `physical_examinations`
+- `dental_repository`
+- `accident_reports`
+- `staff_schedules`
+- `recurring_schedules`
+- `inventory`
+- `supply_requests`
+- `supply_request_items`
+
+Run it with a Supabase service role key:
+
+```bash
+SUPABASE_URL=your-supabase-project-url \
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key \
+npm run test:supabase
+```
+
+The test script creates temporary records and cleans them up automatically.
+
 ## Supabase Schema (SQL)
 
 *NOTE: if your Supabase project was previously used for a dental module, you may still have leftover tables or columns prefixed with `dental_`. the application no longer uses these and they can be safely removed.*

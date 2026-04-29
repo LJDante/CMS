@@ -49,7 +49,10 @@ export default function RegisterStaffAccount({ hideHeader = false }: RegisterSta
         email: formData.email.trim(),
         password: formData.password,
         options: {
-          data: { full_name: formData.fullName.trim() }
+          data: {
+            full_name: formData.fullName.trim(),
+            role: formData.role
+          }
         }
       })
 
@@ -60,22 +63,6 @@ export default function RegisterStaffAccount({ hideHeader = false }: RegisterSta
 
       if (!signUpData.user) {
         toast.error('Failed to create user')
-        return
-      }
-
-      // Step 2: Insert profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: signUpData.user.id,
-          full_name: formData.fullName.trim(),
-          email: formData.email.trim(),
-          role: formData.role,
-          created_at: new Date().toISOString()
-        }, { onConflict: 'id' })
-
-      if (profileError) {
-        toast.error(`Failed to create profile: ${profileError.message}`)
         return
       }
 

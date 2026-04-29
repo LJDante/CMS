@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "echo \"no linter configured\"",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test:supabase": "node scripts/test-supabase-tables.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0",
