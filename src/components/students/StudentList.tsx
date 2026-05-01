@@ -24,7 +24,11 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
   const [section, setSection] = useState('')
   const [schoolYear, setSchoolYear] = useState('all')
   const [guardianFilter, setGuardianFilter] = useState<GuardianFilter>('all')
+  const [collegeProgram, setCollegeProgram] = useState('all')
+  const [collegeYearLevel, setCollegeYearLevel] = useState('all')
   const [availableSections, setAvailableSections] = useState<string[]>([])
+  const [availableCollegePrograms, setAvailableCollegePrograms] = useState<string[]>([])
+  const [availableCollegeYearLevels, setAvailableCollegeYearLevels] = useState<string[]>([])
   const [loadingSections, setLoadingSections] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showSexModal, setShowSexModal] = useState(false)
@@ -85,6 +89,24 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
     void fetchSections()
   }, [gradeLevel])
 
+  useEffect(() => {
+    const collegeStudents = students.filter((p) => p.education_level === 'college')
+    const programs = Array.from(new Set(collegeStudents.map((p) => p.program).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b)) as string[]
+    const yearLevels = Array.from(new Set(collegeStudents.map((p) => p.year_level).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b)) as string[]
+
+    setAvailableCollegePrograms(programs)
+    setAvailableCollegeYearLevels(yearLevels)
+  }, [students])
+
+  useEffect(() => {
+    if (educationType !== 'college' && educationType !== 'all') {
+      setCollegeProgram('all')
+      setCollegeYearLevel('all')
+    }
+  }, [educationType])
+
   // Apply all filters
   const filtered = students.filter((s) => {
     // Search filter (by name or ID)
@@ -126,6 +148,16 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
     // This is prepared for future use; currently just passes all
     if (schoolYear !== 'all') {
       // TODO: implement when school_year column is added
+    }
+
+    // College program filter
+    if (collegeProgram !== 'all' && s.program !== collegeProgram) {
+      return false
+    }
+
+    // College year level filter
+    if (collegeYearLevel !== 'all' && s.year_level !== collegeYearLevel) {
+      return false
     }
 
     // Guardian contact filter
@@ -233,7 +265,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
       </div>
 
       {/* Cascading Filter Dropdowns */}
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
         {/* Education Type Filter */}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Education Type</label>
@@ -298,6 +330,44 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
               ))}
             </select>
             {loadingSections && <p className="text-xs text-slate-500 mt-1">Loading sections...</p>}
+          </div>
+        )}
+
+        {/* College Program Filter */}
+        {(educationType === 'college' || educationType === 'all') && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Program</label>
+            <select
+              value={collegeProgram}
+              onChange={(e) => setCollegeProgram(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">All Programs</option>
+              {availableCollegePrograms.map((program) => (
+                <option key={program} value={program}>
+                  {program}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* College Year Level Filter */}
+        {(educationType === 'college' || educationType === 'all') && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Year Level</label>
+            <select
+              value={collegeYearLevel}
+              onChange={(e) => setCollegeYearLevel(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">All Year Levels</option>
+              {availableCollegeYearLevels.map((yearLevel) => (
+                <option key={yearLevel} value={yearLevel}>
+                  {yearLevel}
+                </option>
+              ))}
+            </select>
           </div>
         )}
 
