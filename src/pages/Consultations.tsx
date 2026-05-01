@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import type { Patient, Consultation, ConsultationNote } from '../types'
 import { ConsultationForm, NotesModal } from '../components/consultations'
+import { PrescriptionUpload } from '../components/consultations/PrescriptionUpload'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
@@ -121,6 +122,11 @@ export default function Consultations() {
     setShowViewModal(true)
   }
 
+  const handleOpenAddForm = () => {
+    setEditingConsultation(null)
+    setShowForm(true)
+  }
+
   const handleEdit = (consultation: Consultation) => {
     setEditingConsultation(consultation)
     setShowForm(true)
@@ -150,7 +156,7 @@ export default function Consultations() {
     setShowNotesModal(true)
   }
 
-  const handleAddConsultation = async (formData: any) => {
+  const handleAddConsultation = async (formData: any, pendingFiles?: File[]) => {
     try {
       const { data, error } = await supabase
         .from('consultations')
@@ -158,8 +164,41 @@ export default function Consultations() {
         .select()
         .single()
 
-      if (error) throw error
-      setConsultations(prev => [data as Consultation, ...prev])
+      if (error || !data) throw error || new Error('Failed to add consultation')
+
+      const createdConsultation = data as Consultation
+      setConsultations(prev => [createdConsultation, ...prev])
+
+      const uploadedUrls: string[] = []
+
+      if (pendingFiles && pendingFiles.length > 0) {
+        for (const file of pendingFiles) {
+          const path = `${createdConsultation.id}/${Date.now()}-${file.name}`
+          const { error: uploadError } = await supabase.storage
+            .from('prescriptions')
+            .upload(path, file, { cacheControl: '3600', upsert: false })
+
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage.from('prescriptions').getPublicUrl(path)
+            if (urlData?.publicUrl) {
+              uploadedUrls.push(urlData.publicUrl)
+            }
+          }
+        }
+      }
+
+      if (uploadedUrls.length > 0) {
+        const { error: updateError } = await supabase
+          .from('consultations')
+          .update({ prescription_images: uploadedUrls })
+          .eq('id', createdConsultation.id)
+
+        if (!updateError) {
+          createdConsultation.prescription_images = uploadedUrls
+          setConsultations(prev => prev.map((c) => c.id === createdConsultation.id ? { ...c, prescription_images: uploadedUrls } : c))
+        }
+      }
+
       setShowForm(false)
       toast.success('Consultation added successfully')
     } catch (error) {
@@ -168,7 +207,7 @@ export default function Consultations() {
     }
   }
 
-  const handleUpdateConsultation = async (formData: any) => {
+  const handleUpdateConsultation = async (formData: any, pendingFiles?: File[]) => {
     if (!editingConsultation) return
 
     try {
@@ -189,6 +228,11 @@ export default function Consultations() {
   }
 
   const handleCloseForm = () => {
+    setShowForm(false)
+    setEditingConsultation(null)
+  }
+
+  const handleCancelAddForm = () => {
     setShowForm(false)
     setEditingConsultation(null)
   }
@@ -250,7 +294,7 @@ export default function Consultations() {
             Export to Excel
           </button>
           <button
-            onClick={() => setShowForm(true)}
+            onClick={handleOpenAddForm}
             className="btn-primary flex items-center gap-2"
           >
             <Plus className="h-4 w-4" />
@@ -424,6 +468,13 @@ export default function Consultations() {
                   {normalizeLabel(selectedConsultation.status ?? 'pending')}
                 </span>
               </div>
+              <div className="mt-6">
+                <PrescriptionUpload
+                  consultationId={selectedConsultation.id}
+                  existingFiles={selectedConsultation.prescription_images ?? []}
+                  onUpdate={(newFiles) => setSelectedConsultation((prev) => prev ? { ...prev, prescription_images: newFiles } : prev)}
+                />
+              </div>
             </div>
             <div className="mt-6 flex justify-end">
               <button
@@ -469,9 +520,19 @@ export default function Consultations() {
             status: editingConsultation.status || 'pending'
           } : undefined}
           onSubmit={editingConsultation ? handleUpdateConsultation : handleAddConsultation}
-          onCancel={handleCloseForm}
+          onCancel={editingConsultation ? handleCloseForm : handleCancelAddForm}
           isEditing={!!editingConsultation}
           patient={editingConsultation ? patients.find((p) => p.id === editingConsultation.patient_id) : undefined}
+          consultationId={editingConsultation?.id}
+          prescriptionImages={editingConsultation ? editingConsultation.prescription_images ?? [] : []}
+          onPrescriptionUpdate={(newFiles) => {
+            if (!editingConsultation) return
+            setEditingConsultation((prev) => prev ? { ...prev, prescription_images: newFiles } : prev)
+            setConsultations((prev) => prev.map((c) =>
+              c.id === editingConsultation?.id ? { ...c, prescription_images: newFiles } : c
+            ))
+          }}
+          onDone={handleCloseForm}
         />
       )}
 

@@ -1,3 +1,5 @@
+import type { EducationLevel } from './types/students'
+
 export type Role = 'clinic_staff' | 'clinic_nurse' | 'clinic_admin' | 'clinic_doctor'
 
 export interface Profile {
@@ -17,7 +19,7 @@ export interface Patient {
   age?: number
   grade_level?: string
   section?: string
-  education_level?: 'kindergarten' | 'k-12' | 'shs' | 'college' | 'n/a'
+  education_level?: EducationLevel
   program?: string
   year_level?: string
   shs_track?: string

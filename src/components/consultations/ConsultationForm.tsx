@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import toast from 'react-hot-toast'
 import type { ConsultationFormData } from '../../types/consultations'
 import type { Patient } from '../../types'
 import { CONSULTATION_STATUS_OPTIONS } from '../../constants'
 import { supabase } from '../../lib/supabaseClient'
+import { PrescriptionUpload } from './PrescriptionUpload'
 
 const formatForDatetimeLocal = (value: string | null | undefined): string => {
   if (!value) return ''
@@ -23,13 +25,17 @@ const getLocalDatetimeNow = (): string => {
 
 interface ConsultationFormProps {
   initialData?: Partial<ConsultationFormData>
-  onSubmit: (data: ConsultationFormData) => Promise<void>
+  onSubmit: (data: ConsultationFormData, pendingFiles?: File[]) => Promise<void>
   onCancel: () => void
   isEditing?: boolean
   patient?: Patient
+  consultationId?: string
+  prescriptionImages?: string[]
+  onPrescriptionUpdate?: (newFiles: string[]) => void
+  onDone?: () => void
 }
 
-export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = false, patient }: ConsultationFormProps) {
+export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = false, patient, consultationId, prescriptionImages, onPrescriptionUpdate, onDone }: ConsultationFormProps) {
   const [form, setForm] = useState<ConsultationFormData>(() => {
     const consultationDate = formatForDatetimeLocal(initialData?.consultation_date) || getLocalDatetimeNow()
     const followUpDate = formatForDatetimeLocal(initialData?.follow_up_date) || null
@@ -71,6 +77,9 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(patient || null)
   const [patientError, setPatientError] = useState<string | null>(null)
   const [loadingPatients, setLoadingPatients] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingPreviews, setPendingPreviews] = useState<string[]>([])
+  const [uploadingFiles, setUploadingFiles] = useState(false)
 
   useEffect(() => {
     setSelectedPatient(patient || null)
@@ -129,9 +138,11 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setUploadingFiles(true)
 
     if (!form.patient_id) {
       setPatientError('Please select a patient')
+      setUploadingFiles(false)
       return
     }
 
@@ -163,7 +174,11 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
       status: form.status || 'pending'
     } as ConsultationFormData
 
-    await onSubmit(submitData)
+    try {
+      await onSubmit(submitData, pendingFiles)
+    } finally {
+      setUploadingFiles(false)
+    }
   }
 
   return (
@@ -469,11 +484,86 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
               </div>
             </div>
 
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold text-slate-800 mb-4">Prescription Files</h3>
+
+              {isEditing && consultationId && (
+                <PrescriptionUpload
+                  consultationId={consultationId}
+                  existingFiles={prescriptionImages ?? []}
+                  onUpdate={(newFiles) => onPrescriptionUpdate?.(newFiles)}
+                />
+              )}
+
+              {!isEditing && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-500">Upload, view, or delete prescription documents for this consultation.</p>
+                    <label className="inline-flex items-center gap-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 cursor-pointer transition">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      Upload PDF
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.type !== 'application/pdf') {
+                            toast.error('Only PDF files are allowed')
+                            return
+                          }
+                          if (file.size > 50 * 1024 * 1024) {
+                            toast.error('File size must be less than 50MB')
+                            return
+                          }
+                          setPendingFiles(prev => [...prev, file])
+                          setPendingPreviews(prev => [...prev, file.name])
+                          e.target.value = ''
+                        }}
+                      />
+                    </label>
+                  </div>
+
+                  {pendingPreviews.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-5 text-center">
+                      <p className="text-sm text-slate-400">No prescription PDFs uploaded yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {pendingPreviews.map((name, index) => (
+                        <div key={index} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <span className="text-sm text-slate-700">{name}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPendingFiles(prev => prev.filter((_, i) => i !== index))
+                              setPendingPreviews(prev => prev.filter((_, i) => i !== index))
+                            }}
+                            className="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded hover:bg-red-50"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-3 pt-4">
-              <button type="button" className="btn-secondary" onClick={onCancel}>
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={onCancel}
+              >
                 Cancel
               </button>
-              <button type="submit" className="btn-primary">
+              <button type="submit" className="btn-primary" disabled={uploadingFiles}>
                 {isEditing ? 'Update Consultation' : 'Add Consultation'}
               </button>
             </div>

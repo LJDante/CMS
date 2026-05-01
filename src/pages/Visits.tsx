@@ -620,7 +620,7 @@ export default function Visits() {
 
       {showViewModal && editingVisit && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-           <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+           <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
              <h2 className="text-lg font-semibold text-slate-800">Clinic visit details</h2>
              <div className="mt-4 space-y-3">
                <div>
@@ -721,7 +721,7 @@ export default function Visits() {
 
       {showForm && (
          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-           <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+           <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
              <h2 className="text-lg font-semibold text-slate-800">{editingVisit ? 'Edit clinic visit' : 'New clinic visit'}</h2>
              <form onSubmit={handleSubmit} className="mt-4 space-y-3">
                <div className="grid grid-cols-2 gap-3">
