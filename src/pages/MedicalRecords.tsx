@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { MedicalRecord, Student, ClinicVisit } from '../types.ts'
-import { Search, Download } from 'lucide-react'
+import { Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { getDisplayName } from '../utils/nameFormatter'
-import * as XLSX from 'xlsx'
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return 'N/A'
@@ -20,7 +19,6 @@ const formatDate = (dateStr: string | null) => {
     return 'N/A'
   }
 }
-import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 import philippinesData from '../constants/philippines.json'
 
@@ -156,32 +154,6 @@ export default function MedicalRecords() {
       return format(new Date(value), 'MMMM d, yyyy h:mm a')
     }
     return value
-  }
-
-  const exportToExcel = () => {
-    const data = students.map(s => {
-      const obj = {
-        'Patient ID': s.patient_id,
-        'First Name': s.first_name,
-        'Middle Name': s.middle_name || '',
-        'Last Name': s.last_name,
-        'Date of Birth': s.date_of_birth || '',
-        'Age': s.age || '',
-        'Sex': formatSex(s.sex),
-        'Contact Number': s.contact_number || '',
-        'Guardian Email': s.guardian_email || '',
-        'Address': s.address_field?.trim() || 'N/A'
-      }
-      return Object.fromEntries(Object.entries(obj).map(([k, val]) => [k, formatTimestamp(val)]))
-    })
-
-    const ws = XLSX.utils.json_to_sheet(data)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Medical Records')
-    const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    saveAs(blob, 'medical_records.xlsx')
-    toast.success('Excel file exported successfully')
   }
 
   const openPrintableRecord = () => {
@@ -338,18 +310,11 @@ export default function MedicalRecords() {
   })
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="animate-fade-in w-full max-w-screen-xl px-4 py-3 sm:px-6 lg:px-8 mx-auto">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-slate-800">Medical Records</h1>
         </div>
-        <button
-          onClick={exportToExcel}
-          className="inline-flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
-        >
-          <Download className="h-4 w-4" />
-          Export to Excel
-        </button>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4">
@@ -376,7 +341,7 @@ export default function MedicalRecords() {
                   <td className="px-4 py-3 font-mono text-xs">{s.patient_id}</td>
                   <td className="px-4 py-3">{fullName}</td>
                   <td className="px-4 py-3">
-                    {profile?.role !== 'clinic_admin' && <button className="btn-primary" onClick={() => void openRecord(s)}>View / Edit</button>}
+                    <button className="btn-primary" onClick={() => void openRecord(s)}>View / Edit</button>
                   </td>
                 </tr>
               )
@@ -387,12 +352,12 @@ export default function MedicalRecords() {
       </div>
 
       {showModal && selected && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800">Medical record — {selected.patient_id} — {selected.last_name}, {selected.first_name}</h2>
-              <div>
-                <button className="btn-secondary mr-2" onClick={() => void openPrintableRecord()}>Open Printable</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-auto bg-black/50 p-4">
+          <div className="w-full max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="min-w-0 text-lg font-semibold text-slate-800">Medical record — {selected.patient_id} — {selected.last_name}, {selected.first_name}</h2>
+              <div className="flex flex-shrink-0 gap-2">
+                <button className="btn-secondary" onClick={() => void openPrintableRecord()}>Open Printable</button>
               </div>
             </div>
             {Object.keys(missingMedColumns).length > 0 && (
@@ -401,14 +366,14 @@ export default function MedicalRecords() {
               </div>
             )}
             <div className="mt-4 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
                   <h3 className="text-sm font-medium text-slate-700">Patient Details</h3>
                   <p className="text-sm text-slate-600">Full patient information for reference and quick edits.</p>
                 </div>
-                <div>
+                <div className="flex-shrink-0">
                   <button
-                    className="inline-flex items-center gap-2 rounded px-2 py-1 text-sm font-medium text-slate-600 hover:bg-slate-100"
+                    className="inline-flex items-center gap-2 rounded px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
                     onClick={() => {
                       setEditingPatientInfo(!editingPatientInfo)
                       if (!editingPatientInfo) setPatientInfo(selected || {})
@@ -420,7 +385,7 @@ export default function MedicalRecords() {
               </div>
 
               {!editingPatientInfo ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="block text-xs font-medium text-slate-500">Name</label>
                     <p className="text-sm text-slate-700">{selected.last_name}, {selected.first_name}{selected.middle_name ? ` ${selected.middle_name}` : ''}</p>
@@ -525,15 +490,15 @@ export default function MedicalRecords() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium">Allergies</label>
-                <textarea rows={3} className="input-field" value={record.allergies || ''} onChange={(e) => setRecord((r) => ({ ...r, allergies: e.target.value }))} disabled={!!missingMedColumns.allergies} />
+                <textarea rows={3} className="input-field w-full min-w-0" value={record.allergies || ''} onChange={(e) => setRecord((r) => ({ ...r, allergies: e.target.value }))} disabled={!!missingMedColumns.allergies} />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Clinically diagnosed diseases</label>
-                <textarea rows={3} className="input-field" value={record.diagnosed_diseases || ''} onChange={(e) => setRecord((r) => ({ ...r, diagnosed_diseases: e.target.value }))} disabled={!!missingMedColumns.diagnosed_diseases} />
+                <textarea rows={3} className="input-field w-full min-w-0" value={record.diagnosed_diseases || ''} onChange={(e) => setRecord((r) => ({ ...r, diagnosed_diseases: e.target.value }))} disabled={!!missingMedColumns.diagnosed_diseases} />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Immunization history / notes</label>
-                <textarea rows={3} className="input-field" value={record.immunization_history || ''} onChange={(e) => setRecord((r) => ({ ...r, immunization_history: e.target.value }))} disabled={!!missingMedColumns.immunization_history} />
+                <textarea rows={3} className="input-field w-full min-w-0" value={record.immunization_history || ''} onChange={(e) => setRecord((r) => ({ ...r, immunization_history: e.target.value }))} disabled={!!missingMedColumns.immunization_history} />
               </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
