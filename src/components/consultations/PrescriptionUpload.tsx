@@ -25,6 +25,10 @@ const extractFileName = (url: string) => {
   }
 }
 
+const formatDisplayName = (fileName: string) => {
+  return fileName.replace(/^[0-9]+-/, '')
+}
+
 const getStoragePath = (fileUrl: string) => {
   try {
     const parsed = new URL(fileUrl)
@@ -129,7 +133,7 @@ export function PrescriptionUpload({ consultationId, existingFiles, onUpdate }: 
   }
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="w-full rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-slate-800">Prescription PDFs</h3>
@@ -159,38 +163,40 @@ export function PrescriptionUpload({ consultationId, existingFiles, onUpdate }: 
         {existingFiles.length === 0 ? (
           <p className="text-sm text-slate-500">No prescription PDFs uploaded yet.</p>
         ) : (
-          existingFiles.map((fileUrl) => (
-            <div key={fileUrl} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-slate-500" />
-                <div>
-                  <p className="font-medium text-slate-900">{extractFileName(fileUrl)}</p>
-                  <p className="text-xs text-slate-500">{fileSizes[fileUrl] ?? 'Size unavailable'}</p>
+          existingFiles.map((fileUrl) => {
+            const fileName = extractFileName(fileUrl)
+            const displayName = formatDisplayName(fileName)
+            return (
+              <div key={fileUrl} className="w-full flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 md:flex-row md:items-center md:justify-between md:flex-nowrap">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="h-4 w-4 text-slate-500" />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-slate-900">{displayName}</p>
+                    <p className="text-xs text-slate-500">{fileSizes[fileUrl] ?? 'Size unavailable'}</p>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-nowrap items-center gap-2 md:mt-0">
+                  <button
+                    type="button"
+                    onClick={() => window.open(fileUrl, '_blank')}
+                    className="btn-secondary inline-flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <Eye className="h-4 w-4" />
+                    View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(fileUrl)}
+                    className="inline-flex items-center gap-2 rounded bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+                    disabled={loading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <a
-                  href={fileUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-secondary inline-flex items-center gap-2"
-                  title="View prescription"
-                >
-                  <Eye className="h-4 w-4" />
-                  View
-                </a>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(fileUrl)}
-                  className="btn-secondary inline-flex items-center gap-2"
-                  disabled={loading}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
     </div>
