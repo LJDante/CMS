@@ -126,7 +126,7 @@ CREATE TABLE public.medical_records (
 );
 CREATE TABLE public.patients (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
-  patient_id character varying NOT NULL UNIQUE CHECK (patient_id::text ~ '^[0-9]{7}$'::text),
+  patient_id character varying NOT NULL UNIQUE CHECK (patient_id::text ~ '^[0-9]{2}-[0-9]{5}$'::text),
   patient_type text NOT NULL CHECK (patient_type = ANY (ARRAY['student'::text, 'personnel'::text])),
   first_name text NOT NULL,
   middle_name text,

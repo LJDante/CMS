@@ -394,7 +394,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Manage Staff Accounts</p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  View all staff profiles and remove accounts when needed. Admin accounts and your own account cannot be deleted.
+                  View all staff profiles and remove accounts when needed. You cannot delete your own account.
                 </p>
               </div>
               <button
@@ -429,7 +429,7 @@ export default function Dashboard() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {staffAccounts.map((account) => {
-                      const canDelete = account.id !== profile.id && account.role !== 'clinic_admin'
+                      const canDelete = account.id !== profile.id
                       const formattedDate = new Date(account.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
