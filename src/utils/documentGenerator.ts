@@ -29,7 +29,7 @@ export function generateInventoryDocument(endingItems: EndingInventoryItem[], si
         new Paragraph({
           children: [
             new TextRun({
-              text: "ENDING INVENTORY SY 2022-2023",
+              text: "ENDING INVENTORY SY 2025-2026",
               bold: true,
               size: 24,
             }),
@@ -89,7 +89,7 @@ export async function exportToWord(endingItems: EndingInventoryItem[], signature
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'Ending_Inventory_SY_2022-2023.docx'
+  a.download = 'Ending_Inventory_SY_2025-2026.docx'
   a.click()
   URL.revokeObjectURL(url)
 }

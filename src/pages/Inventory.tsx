@@ -206,7 +206,7 @@ export default function Inventory() {
           </h1>
           <p className="mt-1 text-slate-500">
             {endingMode
-              ? 'Manage and export the ending inventory for SY 2022-2023'
+              ? 'Manage and export the ending inventory for SY 2025-2026'
               : 'Track medicines, supplies, and equipment stored in the clinic.'
             }
           </p>
