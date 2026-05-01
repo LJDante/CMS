@@ -71,18 +71,24 @@ export function useConsultations(patientId?: string) {
 
   const addConsultation = async (patientId: string, formData: ConsultationFormData) => {
     try {
+      const { patient_id: _ignoredPatientId, ...insertData } = formData
       const { data, error } = await supabase
         .from('consultations')
         .insert({
           patient_id: patientId,
-          ...formData
+          ...insertData
         })
         .select()
         .single()
 
       if (error) throw error
 
-      setConsultations(prev => [data as Consultation, ...prev])
+      const newConsultation = {
+        ...(data as Consultation),
+        follow_up_date: (data as any)?.follow_up_date ?? undefined
+      }
+
+      setConsultations(prev => [newConsultation, ...prev])
       toast.success('Consultation added successfully')
       return data
     } catch (error) {
@@ -100,9 +106,16 @@ export function useConsultations(patientId?: string) {
 
       if (error) throw error
 
+      const normalizeConsultation = (consultation: Consultation): Consultation => ({
+        ...consultation,
+        ...updates,
+        follow_up_date: updates.follow_up_date === null ? undefined : updates.follow_up_date ?? consultation.follow_up_date,
+        lmp: updates.lmp === null ? undefined : updates.lmp ?? consultation.lmp
+      } as Consultation)
+
       setConsultations(prev =>
         prev.map(consultation =>
-          consultation.id === id ? { ...consultation, ...updates } : consultation
+          consultation.id === id ? normalizeConsultation(consultation) : consultation
         )
       )
       toast.success('Consultation updated successfully')
@@ -129,13 +142,75 @@ export function useConsultations(patientId?: string) {
     }
   }
 
+  const uploadPrescription = async (consultationId: string, file: File): Promise<string[] | null> => {
+    try {
+      const path = `${consultationId}/${Date.now()}-${file.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('prescriptions')
+        .upload(path, file, { cacheControl: '3600', upsert: false })
+      if (uploadError) throw uploadError
+
+      const { data: urlData } = supabase.storage.from('prescriptions').getPublicUrl(path)
+      const publicUrl = urlData.publicUrl
+
+      const { data: consultation, error: consultationError } = await supabase
+        .from('consultations')
+        .select('prescription_images')
+        .eq('id', consultationId)
+        .single()
+      if (consultationError) throw consultationError
+
+      const updated = [...(consultation?.prescription_images ?? []), publicUrl]
+      const { error: updateError } = await supabase
+        .from('consultations')
+        .update({ prescription_images: updated })
+        .eq('id', consultationId)
+      if (updateError) throw updateError
+
+      return updated
+    } catch (err) {
+      console.error('Upload prescription error:', err)
+      return null
+    }
+  }
+
+  const deletePrescription = async (consultationId: string, fileUrl: string): Promise<string[] | null> => {
+    try {
+      const match = fileUrl.match(/prescriptions\/(.+)$/)
+      if (match) {
+        await supabase.storage.from('prescriptions').remove([match[1]])
+      }
+
+      const { data: consultation, error: consultationError } = await supabase
+        .from('consultations')
+        .select('prescription_images')
+        .eq('id', consultationId)
+        .single()
+      if (consultationError) throw consultationError
+
+      const updated = (consultation?.prescription_images ?? []).filter((url: string) => url !== fileUrl)
+      const { error: updateError } = await supabase
+        .from('consultations')
+        .update({ prescription_images: updated })
+        .eq('id', consultationId)
+      if (updateError) throw updateError
+
+      return updated
+    } catch (err) {
+      console.error('Delete prescription error:', err)
+      return null
+    }
+  }
+
   return {
     consultations,
     loading,
     loadConsultations,
     addConsultation,
     updateConsultation,
-    deleteConsultation
+    deleteConsultation,
+    uploadPrescription,
+    deletePrescription
   }
 }
 

@@ -27,6 +27,7 @@ const formatParentFullName = (first?: string | null, middle?: string | null, las
 import toast from 'react-hot-toast'
 import { supabase } from '../../lib/supabaseClient'
 import philippinesData from '../../constants/philippines.json'
+import type { EducationLevel } from '../../types/students'
 
 interface StudentDetailsModalProps {
   student: Student | null
@@ -130,6 +131,9 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
   if (!isOpen || !student) {
     return null
   }
+
+  const isGradeLevelEducation = (level?: EducationLevel | null): level is 'elementary' | 'junior-high-school' | 'kindergarten' =>
+    level === 'elementary' || level === 'junior-high-school' || level === 'kindergarten'
 
   const saveChanges = async () => {
     if (!formData) return
@@ -426,7 +430,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                         <option value="college">College</option>
                       </select>
                     </div>
-                    {(displayData?.education_level === 'elementary' || displayData?.education_level === 'junior-high-school' || displayData?.education_level === 'kindergarten') && (
+                    {isGradeLevelEducation(displayData?.education_level) && (
                       <>
                         <div>
                           <label className="text-xs font-medium text-slate-500 uppercase tracking-wide">Grade Level</label>
