@@ -46,8 +46,8 @@ export default function Patients() {
   const [showDetails, setShowDetails] = useState(false)
   const [loading, setLoading] = useState(true)
   const [medicalHistory, setMedicalHistory] = useState<ClinicVisit[]>([])
-  const [editingEnrollment, setEditingEnrollment] = useState(false)
-  const [enrollmentStatus, setEnrollmentStatus] = useState<'active' | 'inactive'>('active')
+  const [editingStatus, setEditingStatus] = useState(false)
+  const [status, setStatus] = useState<'active' | 'inactive'>('active')
   
   // Edit patient info states
   const [isEditingPatient, setIsEditingPatient] = useState(false)
@@ -234,28 +234,28 @@ export default function Patients() {
   }
 
   // Apply bulk status change
-  const saveEnrollmentStatus = async () => {
+  const saveStatus = async () => {
     if (!selectedPatient) return
 
     try {
       // Update database
       await supabase
         .from('patients')
-        .update({ enrollment_status: enrollmentStatus })
+        .update({ enrollment_status: status })
         .eq('id', selectedPatient.id)
 
       // Update selectedPatient state
-      const updatedPatient = { ...selectedPatient, enrollment_status: enrollmentStatus }
+      const updatedPatient = { ...selectedPatient, enrollment_status: status }
       setSelectedPatient(updatedPatient)
 
       // Update patients array (use functional update to avoid stale closure)
       setPatients((prev) => prev.map(p => p.id === selectedPatient.id ? updatedPatient : p))
 
-      setEditingEnrollment(false)
-      toast.success(`Enrollment status updated to ${enrollmentStatus}`)
+      setEditingStatus(false)
+      toast.success(`Status updated to ${status}`)
     } catch (error) {
       console.error('Failed to update status', error)
-      toast.error('Failed to update enrollment status')
+      toast.error('Failed to update status')
     }
   }
 
@@ -292,7 +292,7 @@ export default function Patients() {
       }
     } catch (error) {
       console.error('Failed to update status', error)
-      toast.error('Failed to update enrollment status')
+      toast.error('Failed to update status')
     }
   }
 
@@ -981,7 +981,7 @@ export default function Patients() {
           'Allergies': p.allergies || 'N/A',
           'Diagnosed Diseases': p.diagnosed_diseases || 'N/A',
           'Address': p.address_field?.trim() || 'N/A',
-          'Enrollment Status': p.enrollment_status || 'active'
+          'Patient Status': p.enrollment_status || 'active'
         }
         return obj
       })
@@ -1266,7 +1266,7 @@ export default function Patients() {
               className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
             >
               <Edit2 className="h-4 w-4" />
-              Change Enrollment Status
+              Change Patient Status
             </button>
           </div>
         </div>
@@ -1323,7 +1323,7 @@ export default function Patients() {
                 <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Name</th>
                 <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Type</th>
                 <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Level / Program</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Enrollment Status</th>
+                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Patient Status</th>
                 <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Contact</th>
                 <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Action</th>
               </tr>
@@ -1365,8 +1365,8 @@ export default function Patients() {
                         onClick={() => {
                               setSelectedPatient(p)
                               const currentStatus = p.enrollment_status ?? 'active'
-                              setEnrollmentStatus(currentStatus)
-                              setEditingEnrollment(false)
+                              setStatus(currentStatus)
+                              setEditingStatus(false)
                               setShowDetails(true)
                               void loadMedicalHistory(p.id)
                             }}
@@ -1409,8 +1409,8 @@ export default function Patients() {
                   onClick={() => {
                     setShowDetails(false)
                     setSelectedPatient(null)
-                    setEnrollmentStatus('active')
-                    setEditingEnrollment(false)
+                    setStatus('active')
+                    setEditingStatus(false)
                     cancelEditPatient()
                   }}
                   className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -2166,35 +2166,35 @@ export default function Patients() {
                 </div>
               </div>
 
-              {/* Enrollment Status */}
+              {/* Status */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-slate-700">Enrollment Status</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">Patient Status</h3>
                   <button
-                    onClick={() => setEditingEnrollment(!editingEnrollment)}
+                    onClick={() => setEditingStatus(!editingStatus)}
                     className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
                   >
                     <Edit2 className="h-3 w-3" />
-                    {editingEnrollment ? 'Cancel' : 'Edit'}
+                    {editingStatus ? 'Cancel' : 'Edit'}
                   </button>
                 </div>
                 <div className="rounded-lg bg-gray-50 p-4">
-                  {editingEnrollment ? (
+                  {editingStatus ? (
                     <div className="space-y-3">
                       <select
-                        value={enrollmentStatus}
-                        onChange={(e) => setEnrollmentStatus(e.target.value as 'active' | 'inactive')}
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value as 'active' | 'inactive')}
                         className="input-field"
                       >
                         <option value="active">Active - Currently Enrolled</option>
                         <option value="inactive">Inactive - No Longer Enrolled</option>
                       </select>
                       <button
-                        onClick={saveEnrollmentStatus}
+                        onClick={saveStatus}
                         className="w-full flex items-center justify-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                       >
                         <Check className="h-4 w-4" />
-                        Save Status
+                        Save Patient Status
                       </button>
                     </div>
                   ) : (
@@ -2307,8 +2307,8 @@ export default function Patients() {
                   onClick={() => {
                     setShowDetails(false)
                     setSelectedPatient(null)
-                    setEnrollmentStatus('active')
-                    setEditingEnrollment(false)
+                    setStatus('active')
+                    setEditingStatus(false)
                     cancelEditPatient()
                   }}
                   className="btn-secondary"
@@ -2326,7 +2326,7 @@ export default function Patients() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-800">Change Enrollment Status</h2>
+              <h2 className="text-lg font-semibold text-slate-800">Change Patient Status</h2>
               <button
                 onClick={() => setShowBulkActions(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors"
@@ -2337,11 +2337,10 @@ export default function Patients() {
 
             <div className="mb-6">
               <p className="text-sm text-slate-600 mb-4">
-                Update enrollment status for <span className="font-semibold">{selectedIds.size} patient(s)</span>
+                Update patient status for <span className="font-semibold">{selectedIds.size} patient(s)</span>
               </p>
-              
               <div className="space-y-3">
-                <label className="text-sm font-medium text-slate-700">New Status</label>
+                <label className="text-sm font-medium text-slate-700">New Patient Status</label>
                 <select
                   value={bulkStatus}
                   onChange={(e) => setBulkStatus(e.target.value as 'active' | 'inactive')}

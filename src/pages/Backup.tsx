@@ -206,8 +206,8 @@ export function Backup() {
           const guardianEmailIndex = headers.indexOf('Guardian Email')
           if (guardianEmailIndex !== -1) sampleRow[guardianEmailIndex] = 'guardian@example.com'
 
-          const enrollmentStatusIndex = headers.indexOf('Enrollment Status')
-          if (enrollmentStatusIndex !== -1) sampleRow[enrollmentStatusIndex] = 'active'
+          const statusIndex = headers.indexOf('Patient Status')
+          if (statusIndex !== -1) sampleRow[statusIndex] = 'active'
 
           const adviserIndex = headers.indexOf('Adviser')
           if (adviserIndex !== -1) sampleRow[adviserIndex] = 'Mrs. Smith'
@@ -278,7 +278,7 @@ export function Backup() {
 
   const getDefaultHeadersForTable = (table: string): string[] => {
     const tableHeaders: { [key: string]: string[] } = {
-      patients: ['Student ID', 'Grade Level', 'Section', 'Last Name', 'First Name', 'Middle Name', 'Address', 'Date of Birth', 'Age', 'Sex', 'Suffix', 'Father Suffix', 'Contact Number', 'Guardian Contact', 'Guardian Email', 'Mother\'s Name', 'Mother First Name', 'Mother Middle Name', 'Mother Last Name', 'Father\'s Name', 'Father First Name', 'Father Middle Name', 'Father Last Name', 'Guardian\'s Name', 'Person to Notify', 'Emergency Contact', 'Voucher Type', 'Patient Type', 'Program', 'Year Level', 'SHS Track', 'Education Level', 'Enrollment Status', 'Adviser', 'Barangay', 'City', 'Province', 'Zip Code', 'Allergies', 'Diagnosed Diseases'],
+      patients: ['Student ID', 'Grade Level', 'Section', 'Last Name', 'First Name', 'Middle Name', 'Address', 'Date of Birth', 'Age', 'Sex', 'Suffix', 'Father Suffix', 'Contact Number', 'Guardian Contact', 'Guardian Email', 'Mother\'s Name', 'Mother First Name', 'Mother Middle Name', 'Mother Last Name', 'Father\'s Name', 'Father First Name', 'Father Middle Name', 'Father Last Name', 'Guardian\'s Name', 'Person to Notify', 'Emergency Contact', 'Voucher Type', 'Patient Type', 'Program', 'Year Level', 'SHS Track', 'Education Level', 'Patient Status', 'Adviser', 'Barangay', 'City', 'Province', 'Zip Code', 'Allergies', 'Diagnosed Diseases'],
       inventory: ['id', 'name', 'category', 'unit', 'quantity_on_hand', 'reorder_level', 'expiration_date', 'remarks', 'created_at', 'updated_at'],
       profiles: ['id', 'user_id', 'email', 'full_name', 'role', 'created_at', 'updated_at'],
       medical_records: ['id', 'patient_id', 'record_date', 'diagnosis', 'treatment', 'medications', 'notes', 'created_at', 'updated_at'],
@@ -465,7 +465,7 @@ export function Backup() {
             city: get('city') || null,
             province: get('province') || null,
             zip_code: normalizeZip(get('zip_code', 'zip', 'zipcode')),
-            enrollment_status: get('enrollment_status', 'enrollment status') || 'active',
+            enrollment_status: get('enrollment_status', 'patient status', 'status', 'enrollment status') || 'active',
             allergies: get('allergies') || null,
             diagnosed_diseases: get('diagnosed_diseases', 'diagnosed diseases', 'diseases') || null,
             adviser: get('adviser') || null
