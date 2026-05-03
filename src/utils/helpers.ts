@@ -44,8 +44,8 @@ export function getGradeLevelDatabaseValues(gradeLevel: GradeLevel) {
   return gradeLevel === 'all' ? [] : GRADE_LEVEL_DB_MAP[gradeLevel] ?? []
 }
 
-export function getGradeFilterOptions(educationType: string): GradeOptionGroup[] {
-  if (educationType === 'k12' || educationType === 'all') {
+export function getGradeFilterOptions(institutionType: string): GradeOptionGroup[] {
+  if (institutionType === 'k12' || institutionType === 'all') {
     return K12_GRADE_LEVEL_FILTER_GROUPS
   }
 
@@ -58,10 +58,10 @@ export interface GradeLevelQueryParams {
   educationLevels?: string[]
 }
 
-export function getGradeLevelQueryParams(educationType: string, selectedGrade: string): GradeLevelQueryParams | null {
+export function getGradeLevelQueryParams(institutionType: string, selectedGrade: string): GradeLevelQueryParams | null {
   if (selectedGrade === 'all' || !selectedGrade) return null
 
-  const targetType = educationType === 'all' ? 'k12' : educationType
+  const targetType = institutionType === 'all' ? 'k12' : institutionType
   const normalizedGrade = normalizeGradeValue(selectedGrade)
 
   if (targetType === 'k12') {
@@ -108,14 +108,14 @@ export function isK12EducationLevel(level?: string | null) {
 
 export function matchesGradeFilter(
   student: { grade_level?: string | null; year_level?: string | null; education_level?: string | null },
-  educationType: string,
+  institutionType: string,
   selectedGrade: string
 ) {
   if (selectedGrade === 'all' || !selectedGrade) {
     return true
   }
 
-  const targetType = educationType === 'all' ? 'k12' : educationType
+  const targetType = institutionType === 'all' ? 'k12' : institutionType
   const normalizedGrade = normalizeGradeValue(student.grade_level)
   const normalizedYear = normalizeGradeValue(student.year_level)
 

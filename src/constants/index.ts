@@ -3,8 +3,8 @@ export const DEFAULT_DISPLAY_VALUE = 'N/A'
 export const PATIENT_EDIT_ROLES = ['clinic_staff', 'clinic_nurse', 'clinic_doctor', 'clinic_admin'] as const
 export type PatientEditRole = (typeof PATIENT_EDIT_ROLES)[number]
 
-export const EDUCATION_TYPE_OPTIONS = [
-  { value: 'all', label: 'All Education Types' },
+export const INSTITUTION_OPTIONS = [
+  { value: 'all', label: 'All Institutions' },
   { value: 'k12', label: 'K-12' },
   { value: 'college', label: 'College' },
   { value: 'personnel', label: 'School Personnel' }

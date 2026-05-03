@@ -29,12 +29,12 @@ const formatParentFullName = (last?: string | null, first?: string | null, middl
   return names.length ? names.join(' ') : 'N/A'
 }
 
-import { EDUCATION_TYPE_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../constants'
+import { INSTITUTION_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../constants'
 import { getGradeFilterOptions, getGradeLevelQueryParams, isK12EducationLevel, matchesGradeFilter } from '../utils/helpers'
 import philippinesData from '../constants/philippines.json'
 import Papa from 'papaparse'
 
-type EducationType = 'all' | 'k12' | 'college' | 'personnel'
+type InstitutionType = 'all' | 'k12' | 'college' | 'personnel'
 type GradeLevel = string
 type GuardianFilter = 'all' | 'has-contact' | 'no-contact'
 
@@ -75,7 +75,7 @@ export default function Patients() {
   const [sexUpdateLoading, setSexUpdateLoading] = useState(false)
 
   // Filter states
-  const [educationType, setEducationType] = useState<EducationType>('all')
+  const [institutionType, setInstitutionType] = useState<InstitutionType>('all')
   const [gradeLevel, setGradeLevel] = useState<GradeLevel>('all')
   const [section, setSection] = useState('')
   const [schoolYear, setSchoolYear] = useState('all')
@@ -123,7 +123,7 @@ export default function Patients() {
 
       setLoadingSections(true)
       try {
-        const queryParams = getGradeLevelQueryParams(educationType, gradeLevel)
+        const queryParams = getGradeLevelQueryParams(institutionType, gradeLevel)
 
         if (!queryParams) {
           setAvailableSections([])
@@ -169,10 +169,12 @@ export default function Patients() {
 
   useEffect(() => {
     const collegeStudents = patients.filter((p) => p.education_level === 'college')
-    const programs = Array.from(new Set(collegeStudents.map((p) => p.program).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b)) as string[]
-    const yearLevels = Array.from(new Set(collegeStudents.map((p) => p.year_level).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b)) as string[]
+    const programs = Array.from(
+      new Set(collegeStudents.map((p) => p.program).filter((program): program is string => Boolean(program)))
+    ).sort((a, b) => a.localeCompare(b))
+    const yearLevels = Array.from(
+      new Set(collegeStudents.map((p) => p.year_level).filter((yearLevel): yearLevel is string => Boolean(yearLevel)))
+    ).sort((a, b) => a.localeCompare(b))
 
     setAvailableCollegePrograms(programs)
     setAvailableCollegeYearLevels(yearLevels)
@@ -180,11 +182,11 @@ export default function Patients() {
 
   // Reset college-specific filters when switching away from college or all
   useEffect(() => {
-    if (educationType !== 'college' && educationType !== 'all') {
+    if (institutionType !== 'college' && institutionType !== 'all') {
       setCollegeProgram('all')
       setCollegeYearLevel('all')
     }
-  }, [educationType])
+  }, [institutionType])
 
   // Initialize selectedProvince when entering edit mode
   useEffect(() => {
@@ -632,26 +634,26 @@ export default function Patients() {
 
     if (!matchesSearch) return false
 
-    // Education type filter
-    if (educationType !== 'all') {
-      if (educationType === 'k12') {
+    // Institution filter
+    if (institutionType !== 'all') {
+      if (institutionType === 'k12') {
         if (s.patient_type !== 'student' || !['k-12', 'kindergarten', 'shs'].includes(s.education_level ?? '')) {
           return false
         }
-      } else if (educationType === 'college') {
+      } else if (institutionType === 'college') {
         if (s.patient_type !== 'student' || s.education_level !== 'college') {
           return false
         }
-      } else if (educationType === 'personnel') {
+      } else if (institutionType === 'personnel') {
         if (s.patient_type !== 'personnel') {
           return false
         }
       }
     }
 
-    // Grade level filter (only applies when education type is K-12)
+    // Grade level filter (only applies when institution is K-12)
     if (gradeLevel !== 'all') {
-      if (!matchesGradeFilter(s, educationType, gradeLevel)) return false
+      if (!matchesGradeFilter(s, institutionType, gradeLevel)) return false
     }
 
     // Section filter (only applies when grade level is selected)
@@ -738,8 +740,8 @@ export default function Patients() {
     let fileName = 'All_Patients_Export.xlsx'
     let data
 
-    // Determine what to export based on current education type filter
-    if (educationType === 'k12') {
+    // Determine what to export based on current institution filter
+    if (institutionType === 'k12') {
       // K-12 students only with K-12 specific columns
       dataToExport = filtered.filter(p => p.patient_type === 'student' && p.education_level === 'k-12')
       fileName = 'K12_Students_Export.xlsx'
@@ -817,7 +819,7 @@ export default function Patients() {
         toast.success(`Excel file exported successfully (${dataToExport.length} records)`)
       })
       return
-    } else if (educationType === 'college') {
+    } else if (institutionType === 'college') {
       // College students only with college specific columns
       dataToExport = filtered.filter(p => p.patient_type === 'student' && p.education_level === 'college')
       fileName = 'College_Patients_Export.xlsx'
@@ -887,7 +889,7 @@ export default function Patients() {
         toast.success(`Excel file exported successfully (${dataToExport.length} records)`)
       })
       return
-    } else if (educationType === 'personnel') {
+    } else if (institutionType === 'personnel') {
       // Personnel only with personnel specific columns
       dataToExport = filtered.filter(p => p.patient_type === 'personnel')
       fileName = 'Personnel_Export.xlsx'
@@ -1072,7 +1074,7 @@ export default function Patients() {
             title="Export filtered patients to Excel based on current filters"
           >
             <Download className="h-4 w-4" />
-            Export{educationType !== 'all' ? ` ${educationType.toUpperCase()}` : ''} to Excel
+            Export{institutionType !== 'all' ? ` ${institutionType.toUpperCase()}` : ''} to Excel
           </button>
         </div>
       </div>
@@ -1099,19 +1101,19 @@ export default function Patients() {
 
       {/* Cascading Filter Dropdowns */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
-        {/* Education Type Filter */}
+        {/* Institution Filter */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Education Type</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Institution</label>
           <select
-            value={educationType}
+            value={institutionType}
             onChange={(e) => {
-              setEducationType(e.target.value as EducationType)
+              setInstitutionType(e.target.value as InstitutionType)
               setGradeLevel('all')
               setSection('')
             }}
             className="input-field"
           >
-            {EDUCATION_TYPE_OPTIONS.map((option) => (
+            {INSTITUTION_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -1119,8 +1121,8 @@ export default function Patients() {
           </select>
         </div>
 
-        {/* Grade Level Filter for K-12 */}
-        {(educationType === 'k12' || educationType === 'all') && (
+        {/* Grade level filter (only applies when institution is K-12) */}
+        {(institutionType === 'k12' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
             <select
@@ -1132,7 +1134,7 @@ export default function Patients() {
               className="input-field"
             >
               <option value="all">All Grade Levels</option>
-              {getGradeFilterOptions(educationType).map((group) => (
+              {getGradeFilterOptions(institutionType).map((group) => (
                 <optgroup key={group.label} label={group.label}>
                   {group.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -1146,7 +1148,7 @@ export default function Patients() {
         )}
 
         {/* Section Filter - Only show when grade level is selected */}
-        {(educationType === 'k12' || educationType === 'all') && gradeLevel !== 'all' && (
+        {(institutionType === 'k12' || institutionType === 'all') && gradeLevel !== 'all' && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Section</label>
             <select
@@ -1167,7 +1169,7 @@ export default function Patients() {
         )}
 
         {/* College Program Filter */}
-        {(educationType === 'college' || educationType === 'all') && (
+        {(institutionType === 'college' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Program</label>
             <select
@@ -1186,7 +1188,7 @@ export default function Patients() {
         )}
 
         {/* College Year Level Filter */}
-        {(educationType === 'college' || educationType === 'all') && (
+        {(institutionType === 'college' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Year Level</label>
             <select

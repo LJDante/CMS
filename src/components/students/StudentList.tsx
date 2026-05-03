@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import toast from 'react-hot-toast'
 import type { Student } from '../../types'
-import { EDUCATION_TYPE_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../../constants'
+import { INSTITUTION_OPTIONS, SCHOOL_YEAR_OPTIONS } from '../../constants'
 import { getGradeFilterOptions, getGradeLevelQueryParams, isK12EducationLevel, matchesGradeFilter } from '../../utils/helpers'
 
 interface StudentListProps {
@@ -14,12 +14,12 @@ interface StudentListProps {
   onStudentsReload?: () => void
 }
 
-type EducationType = 'all' | 'k12' | 'college' | 'personnel'
+type InstitutionType = 'all' | 'k12' | 'college' | 'personnel'
 type GradeLevel = string
 type GuardianFilter = 'all' | 'has-contact' | 'no-contact'
 
 export function StudentList({ students, search, onSearchChange, onViewDetails, onStudentsReload }: StudentListProps) {
-  const [educationType, setEducationType] = useState<EducationType>('all')
+  const [institutionType, setInstitutionType] = useState<InstitutionType>('all')
   const [gradeLevel, setGradeLevel] = useState<GradeLevel>('all')
   const [section, setSection] = useState('')
   const [schoolYear, setSchoolYear] = useState('all')
@@ -45,7 +45,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
 
       setLoadingSections(true)
       try {
-        const queryParams = getGradeLevelQueryParams(educationType, gradeLevel)
+        const queryParams = getGradeLevelQueryParams(institutionType, gradeLevel)
 
         if (!queryParams) {
           setAvailableSections([])
@@ -101,11 +101,11 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
   }, [students])
 
   useEffect(() => {
-    if (educationType !== 'college' && educationType !== 'all') {
+    if (institutionType !== 'college' && institutionType !== 'all') {
       setCollegeProgram('all')
       setCollegeYearLevel('all')
     }
-  }, [educationType])
+  }, [institutionType])
 
   // Apply all filters
   const filtered = students.filter((s) => {
@@ -118,17 +118,17 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
 
     if (!matchesSearch) return false
 
-    // Education type filter
-    if (educationType !== 'all') {
-      if (educationType === 'k12') {
+    // Institution filter
+    if (institutionType !== 'all') {
+      if (institutionType === 'k12') {
         if (s.patient_type !== 'student' || !isK12EducationLevel(s.education_level)) {
           return false
         }
-      } else if (educationType === 'college') {
+      } else if (institutionType === 'college') {
         if (s.patient_type !== 'student' || s.education_level !== 'college') {
           return false
         }
-      } else if (educationType === 'personnel') {
+      } else if (institutionType === 'personnel') {
         if (s.patient_type !== 'personnel') {
           return false
         }
@@ -136,7 +136,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
     }
 
     if (gradeLevel !== 'all') {
-      if (!matchesGradeFilter(s, educationType, gradeLevel)) return false
+      if (!matchesGradeFilter(s, institutionType, gradeLevel)) return false
     }
 
     // Section filter (only applies when grade level is selected)
@@ -266,19 +266,19 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
 
       {/* Cascading Filter Dropdowns */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
-        {/* Education Type Filter */}
+        {/* Institution Filter */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Education Type</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Institution</label>
           <select
-            value={educationType}
+            value={institutionType}
             onChange={(e) => {
-              setEducationType(e.target.value as EducationType)
+              setInstitutionType(e.target.value as InstitutionType)
               setGradeLevel('all')
               setSection('')
             }}
             className="input-field"
           >
-            {EDUCATION_TYPE_OPTIONS.map((option) => (
+            {INSTITUTION_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -287,7 +287,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
         </div>
 
         {/* Grade Level Filter for K-12 */}
-        {(educationType === 'k12' || educationType === 'all') && (
+        {(institutionType === 'k12' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Grade Level</label>
             <select
@@ -299,7 +299,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
               className="input-field"
             >
               <option value="all">All Grade Levels</option>
-              {getGradeFilterOptions(educationType).map((group) => (
+              {getGradeFilterOptions(institutionType).map((group) => (
                 <optgroup key={group.label} label={group.label}>
                   {group.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -313,7 +313,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
         )}
 
         {/* Section Filter - Only show when grade level is selected */}
-        {(educationType === 'k12' || educationType === 'all') && gradeLevel !== 'all' && (
+        {(institutionType === 'k12' || institutionType === 'all') && gradeLevel !== 'all' && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Section</label>
             <select
@@ -334,7 +334,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
         )}
 
         {/* College Program Filter */}
-        {(educationType === 'college' || educationType === 'all') && (
+        {(institutionType === 'college' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Program</label>
             <select
@@ -353,7 +353,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
         )}
 
         {/* College Year Level Filter */}
-        {(educationType === 'college' || educationType === 'all') && (
+        {(institutionType === 'college' || institutionType === 'all') && (
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Year Level</label>
             <select
