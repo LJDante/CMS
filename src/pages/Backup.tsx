@@ -20,7 +20,6 @@ export function Backup() {
   const [exporting, setExporting] = useState<'excel' | 'csv' | 'sql' | null>(null)
   const [importing, setImporting] = useState(false)
   const [selectedTable, setSelectedTable] = useState<string>('patients')
-  const [patientUploadCategory, setPatientUploadCategory] = useState<'k-12' | 'college' | 'personnel'>('k-12')
 
   useEffect(() => {
     loadBackups()
@@ -123,12 +122,7 @@ export function Backup() {
   }
 
   const handleTableSelect = (value: string) => {
-    if (value === 'k-12' || value === 'college' || value === 'personnel') {
-      setSelectedTable('patients')
-      setPatientUploadCategory(value as 'k-12' | 'college' | 'personnel')
-    } else {
-      setSelectedTable(value)
-    }
+    setSelectedTable('patients')
   }
 
   const handleDownloadTemplate = async () => {
@@ -170,17 +164,17 @@ export function Backup() {
 
           const educationLevelIndex = headers.indexOf('Education Level')
           if (educationLevelIndex !== -1) {
-            sampleRow[educationLevelIndex] = patientUploadCategory === 'college' ? 'college' : patientUploadCategory === 'k-12' ? 'k-12' : ''
+            sampleRow[educationLevelIndex] = ''
           }
 
           const yearLevelIndex = headers.indexOf('Year Level')
-          if (yearLevelIndex !== -1 && patientUploadCategory === 'college') {
-            sampleRow[yearLevelIndex] = '1st'
+          if (yearLevelIndex !== -1) {
+            sampleRow[yearLevelIndex] = ''
           }
 
           const programIndex = headers.indexOf('Program')
-          if (programIndex !== -1 && patientUploadCategory === 'college') {
-            sampleRow[programIndex] = 'Program Name'
+          if (programIndex !== -1) {
+            sampleRow[programIndex] = ''
           }
 
           const lastNameIndex = headers.indexOf('Last Name')
@@ -960,40 +954,20 @@ export function Backup() {
 
       {/* Import Section */}
       <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
-        <h2 className="text-xl font-semibold text-slate-800 mb-4">Import Data from CSV</h2>
+        <h2 className="text-xl font-semibold text-slate-800 mb-4">Import Patient Data from CSV</h2>
         <div className="mb-4">
-          <label className="block text-sm font-medium text-slate-700 mb-2">Select Table to Import</label>
+          <label className="block text-sm font-medium text-slate-700 mb-2">Select Patient Data to Import</label>
           <select
-            value={selectedTable === 'patients' ? patientUploadCategory : selectedTable}
+            value={selectedTable}
             onChange={(e) => handleTableSelect(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="k-12">K to 12</option>
-            <option value="college">College</option>
-            <option value="personnel">Personnel</option>
-            <option value="inventory">Inventory</option>
-            <option value="profiles">Profiles</option>
-            <option value="medical_records">Medical Records</option>
-            <option value="consultations">Consultations</option>
-            <option value="clinic_visits">Clinic Visits</option>
-            <option value="staff_schedules">Staff Schedules</option>
-            <option value="supply_requests">Supply Requests</option>
-            <option value="dental_repository">Dental Repository</option>
-            <option value="accident_report_repository">Accident Reports</option>
+            <option value="patients">Patient</option>
           </select>
-        </div>
-        <div className="flex flex-col gap-4 mb-4">
-          <button
-            onClick={handleDownloadTemplate}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Download Excel Template
-          </button>
         </div>
         <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center">
           <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600 mb-4">Download an Excel template, fill it out, then upload a CSV file to import data to {selectedTable === 'patients' ? (patientUploadCategory === 'k-12' ? 'K to 12 Students' : patientUploadCategory === 'college' ? 'College Students' : 'Personnel') : selectedTable.replace('_', ' ')}</p>
+          <p className="text-slate-600 mb-4">Upload a CSV file to import patient records.</p>
           <label className="inline-block">
             <input
               type="file"
