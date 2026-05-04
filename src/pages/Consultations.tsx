@@ -244,6 +244,8 @@ export default function Consultations() {
     return value
   }
 
+  const selectedPatient = selectedConsultation ? patients.find(p => p.id === selectedConsultation.patient_id) : undefined
+
   const exportToExcel = () => {
     const data = consultations.map(c => {
       const patient = patients.find(p => p.id === c.patient_id)
@@ -414,9 +416,16 @@ export default function Consultations() {
           <div className="w-full max-w-xl rounded-xl bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold text-slate-800">Consultation Details</h2>
             <div className="mt-4 space-y-3">
-              <div>
+                <div>
                 <p className="text-xs text-slate-500">Patient</p>
-                <p className="font-medium">{selectedConsultation.patient_external_id}</p>
+                <p className="font-medium">
+                  {selectedPatient
+                    ? `${selectedPatient.last_name}, ${selectedPatient.first_name}${selectedPatient.middle_name ? ` ${selectedPatient.middle_name}` : ''}`
+                    : selectedConsultation.patient_external_id || selectedConsultation.patient_id || '—'}
+                </p>
+                <p className="text-xs text-slate-500">
+                  ID: {selectedPatient?.patient_id || selectedConsultation.patient_external_id || selectedConsultation.patient_id || '—'}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-slate-500">Date</p>
