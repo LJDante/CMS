@@ -14,6 +14,7 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
     unit: '',
     quantity_on_hand: 0,
     reorder_level: 0,
+    expiration_date: null,
     remarks: ''
   })
 
@@ -26,6 +27,7 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
       unit: '',
       quantity_on_hand: 0,
       reorder_level: 0,
+      expiration_date: null,
       remarks: ''
     })
   }
@@ -91,6 +93,15 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
             </div>
           </div>
           <div>
+            <label className="mb-1 block text-sm font-medium">Expiration Date</label>
+            <input
+              type="date"
+              className="input-field"
+              value={form.expiration_date || ''}
+              onChange={(e) => setForm(f => ({ ...f, expiration_date: e.target.value || null }))}
+            />
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium">Remarks</label>
             <input
               className="input-field"
@@ -152,6 +163,15 @@ export function EditItemForm({ initialData, onSubmit, onCancel }: EditItemFormPr
               onChange={(e) => setForm(f => ({ ...f, reorder_level: Number(e.target.value) || 0 }))}
               min={0}
               required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">Expiration Date</label>
+            <input
+              type="date"
+              className="input-field"
+              value={form.expiration_date || ''}
+              onChange={(e) => setForm(f => ({ ...f, expiration_date: e.target.value || null }))}
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">

@@ -332,7 +332,8 @@ export default function Inventory() {
         <EditItemForm
           initialData={{
             quantity_on_hand: items.find(i => i.id === editingId)?.quantity_on_hand || 0,
-            reorder_level: items.find(i => i.id === editingId)?.reorder_level || 0
+            reorder_level: items.find(i => i.id === editingId)?.reorder_level || 0,
+            expiration_date: items.find(i => i.id === editingId)?.expiration_date || null
           }}
           onSubmit={handleUpdateItem}
           onCancel={() => setEditingId(null)}

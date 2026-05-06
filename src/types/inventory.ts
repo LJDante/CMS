@@ -11,10 +11,12 @@ export interface InventoryFormData {
   unit: string
   quantity_on_hand: number
   reorder_level: number
+  expiration_date?: string | null
   remarks: string
 }
 
 export interface EditFormData {
   quantity_on_hand: number
   reorder_level: number
+  expiration_date?: string | null
 }
