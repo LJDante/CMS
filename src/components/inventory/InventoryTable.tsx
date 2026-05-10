@@ -23,7 +23,7 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
                 type="checkbox"
                 checked={allVisibleSelected}
                 onChange={onToggleAll}
-                className="h-4 w-4 text-blue-600"
+                className="h-4 w-4 text-[#0d1b4b]"
               />
             </th>
             <th className="px-4 py-3 font-medium">Name</th>
@@ -40,14 +40,14 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
             return (
               <tr
                 key={item.id}
-                className={`border-b border-slate-100 ${isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'}`}
+                className={`border-b border-slate-100 ${isSelected ? 'bg-[#0d1b4b]/10 hover:bg-[#0d1b4b]/20' : 'hover:bg-gray-50'}`}
               >
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleItem(item.id)}
-                    className="h-4 w-4 text-blue-600"
+                    className="h-4 w-4 text-[#0d1b4b]"
                   />
                 </td>
                 <td className="px-4 py-3">{item.name}</td>
@@ -65,7 +65,7 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
                 <td className="px-4 py-3 flex gap-2">
                   <button
                     onClick={() => onEdit(item)}
-                    className="text-blue-600 hover:text-blue-700 transition-colors"
+                    className="text-[#0d1b4b] hover:text-[#0d1b4b] transition-colors"
                     title="Edit stock"
                   >
                     <Edit2 className="h-4 w-4" />
@@ -162,3 +162,4 @@ export function SearchAndFilter({ search, onSearchChange, category, onCategoryCh
     </div>
   )
 }
+

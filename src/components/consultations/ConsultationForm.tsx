@@ -499,7 +499,7 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-slate-500">Upload, view, or delete prescription documents for this consultation.</p>
-                    <label className="inline-flex items-center gap-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 cursor-pointer transition">
+                    <label className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] hover:bg-[#0d1b4b] text-white text-sm font-medium px-4 py-2 cursor-pointer transition">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                       Upload PDF
                       <input
@@ -573,3 +573,4 @@ export function ConsultationForm({ initialData, onSubmit, onCancel, isEditing = 
     </div>
   )
 }
+

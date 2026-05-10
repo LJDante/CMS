@@ -234,7 +234,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
             {canEdit && !isEditing && (
               <button
                 onClick={startEdit}
-                className="inline-flex items-center gap-2 rounded px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-2 rounded px-3 py-1 text-sm font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
                 title="Edit patient information"
               >
                 <Edit2 className="h-4 w-4" />
@@ -943,9 +943,9 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
           </div>
 
           {/* Registration Date */}
-          <div className="rounded-lg bg-blue-50 p-4">
-            <label className="text-xs font-medium text-blue-700 uppercase tracking-wide">Registration Date</label>
-            <p className="text-sm mt-1 text-blue-900">
+          <div className="rounded-lg bg-[#0d1b4b] p-4">
+            <label className="text-xs font-medium text-[#0d1b4b] uppercase tracking-wide">Registration Date</label>
+            <p className="text-sm mt-1 text-[#0d1b4b]">
               {new Date(student.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
@@ -973,7 +973,7 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
                 type="button"
                 onClick={saveChanges}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors disabled:opacity-50"
               >
                 <Check className="h-4 w-4" />
                 {isSaving ? 'Saving...' : 'Save Changes'}
@@ -993,3 +993,4 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
     </div>
   )
 }
+

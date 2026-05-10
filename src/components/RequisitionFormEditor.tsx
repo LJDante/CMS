@@ -394,7 +394,7 @@ export default function RequisitionFormEditor({ request, onClose }: RequisitionF
               <button
                 type="button"
                 onClick={addRow}
-                className="text-sm text-blue-600 hover:text-blue-800"
+                className="text-sm text-[#0d1b4b] hover:text-[#0d1b4b]"
               >
                 + Add new row
               </button>
@@ -586,4 +586,5 @@ export default function RequisitionFormEditor({ request, onClose }: RequisitionF
       printWindow.print()
     }
   }
+
 

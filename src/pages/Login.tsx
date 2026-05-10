@@ -33,7 +33,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d1b4b]"
                 placeholder="you@school.com"
                 required
               />
@@ -44,14 +44,14 @@ export default function Login() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0d1b4b]"
                 required
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 transition"
+              className="w-full rounded-lg bg-[#0d1b4b] hover:bg-[#0d1b4b] disabled:bg-[#0d1b4b] text-white font-medium py-2 px-4 transition"
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>

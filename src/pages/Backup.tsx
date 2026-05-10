@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Download, FileJson, FileText, Database, Trash2, Upload } from 'lucide-react'
+import { Download, FileJson, FileSpreadsheet, Database, Trash2, Upload } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { exportAsExcel, exportAsCSV, exportAsSQL, getBackupFilename, getBackupStats } from '../utils/backupExport'
 import { supabase } from '../lib/supabaseClient'
@@ -465,7 +465,7 @@ export function Backup() {
             city: get('city') || null,
             province: get('province') || null,
             zip_code: normalizeZip(get('zip_code', 'zip', 'zipcode')),
-            enrollment_status: get('enrollment_status', 'patient status', 'status', 'enrollment status') || 'active',
+            patient_status: get('patient status', 'status', 'patient_status') || 'active',
             allergies: get('allergies') || null,
             diagnosed_diseases: get('diagnosed_diseases', 'diagnosed diseases', 'diseases') || null,
             adviser: get('adviser') || null
@@ -720,7 +720,7 @@ export function Backup() {
             person_to_notify: normalized.person_to_notify,
             emergency_contact: normalized.emergency_contact,
             voucher_type: normalized.voucher_type,
-            enrollment_status: normalized.enrollment_status,
+            patient_status: normalized.patient_status,
             mother_last_name: normalized.mother_last_name,
             mother_first_name: normalized.mother_first_name,
             mother_middle_name: normalized.mother_middle_name,
@@ -811,12 +811,12 @@ export function Backup() {
       </div>
 
       {/* Database Tables Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="bg-[#0d1b4b]/10 border border-[#0d1b4b]/20 rounded-lg p-4">
         <div className="flex items-center">
-          <Database className="w-5 h-5 text-blue-600 mr-3" />
+          <Database className="w-5 h-5 text-[#0d1b4b] mr-3" />
           <div>
-            <p className="font-semibold text-blue-900">14 Database Tables (100% Coverage)</p>
-            <p className="text-sm text-blue-700 mt-1">
+            <p className="font-semibold text-[#0d1b4b]">14 Database Tables (100% Coverage)</p>
+            <p className="text-sm text-[#0d1b4b] mt-1">
               Each backup includes: Patients, Profiles, Medical Records, Consultations, Consultation Notes, Clinic Visits, Physical Examinations, Staff Schedules, Recurring Schedules, Inventory, Supply Requests, Supply Request Items, Dental Repository, Accident Reports
             </p>
           </div>
@@ -848,8 +848,8 @@ export function Backup() {
         {/* CSV Backup */}
         <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
           <div className="flex items-center mb-4">
-            <div className="bg-blue-100 p-3 rounded-lg mr-3">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="bg-[#0d1b4b]/20 p-3 rounded-lg mr-3">
+              <FileSpreadsheet className="w-6 h-6 text-gray-50" />
             </div>
             <h3 className="text-lg font-semibold text-slate-800">CSV Format</h3>
           </div>
@@ -859,7 +859,7 @@ export function Backup() {
           <button
             onClick={handleCSVBackup}
             disabled={exporting === 'csv'}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition"
+            className="w-full bg-[#0d1b4b] hover:bg-[#0d1b4b] disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-lg transition"
           >
             {exporting === 'csv' ? 'Generating...' : 'Backup as CSV'}
           </button>
@@ -914,7 +914,7 @@ export function Backup() {
                           backup.format === 'excel'
                             ? 'bg-green-100 text-green-700'
                             : backup.format === 'csv'
-                              ? 'bg-blue-100 text-blue-700'
+                              ? 'bg-[#0d1b4b]/20 text-[#0d1b4b]'
                               : 'bg-purple-100 text-purple-700'
                         }`}
                       >

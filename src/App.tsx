@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
-import { DarkModeProvider } from './contexts/DarkModeContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { Layout } from './components/Layout'
 import Login from './pages/Login'
@@ -22,9 +21,8 @@ import { Backup } from './pages/Backup'
 
 export default function App() {
   return (
-    <DarkModeProvider>
-      <AuthProvider>
-        <Routes>
+    <AuthProvider>
+      <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route
@@ -180,7 +178,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>
-    </DarkModeProvider>
   )
 }
 

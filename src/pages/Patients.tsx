@@ -1064,9 +1064,9 @@ export default function Patients() {
           <h1 className="text-2xl font-bold text-slate-800">Registered Patients</h1>
         </div>
         <div className="flex items-center gap-4">
-          <div className="rounded-lg bg-blue-50 px-4 py-3">
-            <p className="text-sm text-blue-600">Total Patients</p>
-            <p className="text-3xl font-bold text-blue-700">{patients.length}</p>
+          <div className="rounded-lg bg-[#0d1b4b] px-4 py-3">
+            <p className="text-sm text-slate-100">Total Patients</p>
+            <p className="text-3xl font-bold text-white">{patients.length}</p>
           </div>
           <button
             onClick={exportToExcel}
@@ -1091,7 +1091,7 @@ export default function Patients() {
         {selectedIds.size > 0 && (
           <button
             onClick={() => setShowSexModal(true)}
-            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors"
           >
             <Edit2 className="h-4 w-4" />
             Edit Sex ({selectedIds.size})
@@ -1235,20 +1235,20 @@ export default function Patients() {
 
       {/* Bulk Actions Toolbar */}
       {selectedIds.size > 0 && (
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-blue-50 border border-blue-200 p-4">
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-[#0d1b4b] border border-[#0d1b4b] p-4">
           <div className="flex items-center gap-4">
-            <p className="text-sm font-medium text-blue-900">
+            <p className="text-sm font-medium text-[#0d1b4b]">
               {selectedIds.size} patient{selectedIds.size !== 1 ? 's' : ''} selected
             </p>
             <button
               onClick={selectAll}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-[#0d1b4b] hover:text-[#0d1b4b] font-medium"
             >
               Select All {filtered.length}
             </button>
             <button
               onClick={clearSelection}
-              className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+              className="text-xs text-[#0d1b4b] hover:text-[#0d1b4b] font-medium"
             >
               Clear
             </button>
@@ -1263,7 +1263,7 @@ export default function Patients() {
             </button>
             <button
               onClick={() => setShowBulkActions(true)}
-              className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors"
             >
               <Edit2 className="h-4 w-4" />
               Change Patient Status
@@ -1279,7 +1279,7 @@ export default function Patients() {
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 onClick={() => void updateSelectedPatientsSex('M')}
-                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-blue-400"
+                className="w-full rounded bg-[#0d1b4b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1b4b] transition-colors disabled:cursor-not-allowed disabled:bg-[#0d1b4b]"
                 disabled={sexUpdateLoading}
               >
                 Male
@@ -1307,11 +1307,11 @@ export default function Patients() {
           <p className="text-slate-500">Loading patients...</p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white dark:bg-slate-900 dark:border-slate-700">
+        <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 bg-gray-50 dark:bg-slate-800 dark:border-slate-700">
+            <thead className="border-b border-slate-200 bg-gray-50">
               <tr>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                <th className="px-4 py-3 font-medium text-slate-900">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === filtered.length && filtered.length > 0}
@@ -1319,13 +1319,13 @@ export default function Patients() {
                     className="rounded border-slate-300"
                   />
                 </th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">ID</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Name</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Type</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Level / Program</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Patient Status</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Contact</th>
-                <th className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">Action</th>
+                <th className="px-4 py-3 font-medium text-slate-900">ID</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Name</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Type</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Level / Program</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Patient Status</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Contact</th>
+                <th className="px-4 py-3 font-medium text-slate-900">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -1336,9 +1336,9 @@ export default function Patients() {
                 return (
                   <tr
                   key={p.id}
-                  className={`border-b border-slate-100 dark:border-slate-700 ${selectedIds.has(p.id) ? 'bg-sky-50 dark:bg-slate-800' : 'hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                  className={`border-b border-slate-100 ${selectedIds.has(p.id) ? 'bg-sky-50' : 'hover:bg-gray-50'}`}
                 >
-                    <td className="px-4 py-3 text-slate-900 dark:text-slate-100">
+                    <td className="px-4 py-3 text-slate-900">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(p.id)}
@@ -1346,20 +1346,17 @@ export default function Patients() {
                         className="rounded border-slate-300"
                       />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-900 dark:text-slate-100">{p.patient_id}</td>
-                    <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{fullName}</td>
-                    <td className="px-4 py-3 capitalize text-slate-900 dark:text-slate-100">{p.patient_type}</td>
-                    <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{levelDisplay(p)}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-slate-900">{p.patient_id}</td>
+                    <td className="px-4 py-3 text-slate-900">{fullName}</td>
+                    <td className="px-4 py-3 capitalize text-slate-900">{p.patient_type}</td>
+                    <td className="px-4 py-3 text-slate-900">{levelDisplay(p)}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                        (p.enrollment_status ?? 'active') === 'inactive'
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      }`}>
-                        ● {(p.enrollment_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${(p.enrollment_status ?? 'active') === 'inactive' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                        <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-current"></span>
+                        {(p.enrollment_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-900 dark:text-slate-100">{p.contact_number || 'N/A'}</td>
+                    <td className="px-4 py-3 text-xs text-slate-900">{p.contact_number || 'N/A'}</td>
                     <td className="px-4 py-3">
                       <button
                         onClick={() => {
@@ -1370,7 +1367,7 @@ export default function Patients() {
                               setShowDetails(true)
                               void loadMedicalHistory(p.id)
                             }}
-                        className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20 transition-colors"
+                        className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
                         title="View patient details"
                       >
                         <Eye className="h-4 w-4" />
@@ -1383,7 +1380,7 @@ export default function Patients() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <p className="py-10 text-center text-slate-500 dark:text-slate-400">No patients found.</p>
+            <p className="py-10 text-center text-slate-500">No patients found.</p>
           )}
         </div>
       )}
@@ -1398,7 +1395,7 @@ export default function Patients() {
                 {canEditPatientInfo && !isEditingPatient && (
                   <button
                     onClick={startEditPatient}
-                    className="inline-flex items-center gap-2 rounded px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                    className="inline-flex items-center gap-2 rounded px-3 py-1 text-sm font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
                     title="Edit patient information"
                   >
                     <Edit2 className="h-4 w-4" />
@@ -2191,7 +2188,7 @@ export default function Patients() {
                       </select>
                       <button
                         onClick={saveStatus}
-                        className="w-full flex items-center justify-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 rounded bg-[#0d1b4b] px-3 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors"
                       >
                         <Check className="h-4 w-4" />
                         Save Patient Status
@@ -2199,12 +2196,9 @@ export default function Patients() {
                     </div>
                   ) : (
                     <div>
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${
-                        (selectedPatient.enrollment_status ?? 'active') === 'active' 
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {(selectedPatient.enrollment_status ?? 'active') === 'active' ? '● Active' : '● Inactive'}
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(selectedPatient.enrollment_status ?? 'active') === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-current"></span>
+                        {(selectedPatient.enrollment_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   )}
@@ -2226,7 +2220,7 @@ export default function Patients() {
                               day: 'numeric'
                             })}
                           </p>
-                          <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                          <span className="inline-flex items-center rounded-full bg-[#0d1b4b] px-2 py-1 text-xs font-medium text-[#0d1b4b]">
                             {visit.disposition.replace(/_/g, ' ')}
                           </span>
                         </div>
@@ -2265,9 +2259,9 @@ export default function Patients() {
               </div>
 
               {/* Registration Date */}
-              <div className="rounded-lg bg-blue-50 p-4">
-                <label className="text-xs font-medium text-blue-700 uppercase tracking-wide">Registration Date</label>
-                <p className="text-sm mt-1 text-blue-900">
+              <div className="rounded-lg bg-[#0d1b4b] p-4">
+                <label className="text-xs font-medium text-[#0d1b4b] uppercase tracking-wide">Registration Date</label>
+                <p className="text-sm mt-1 text-[#0d1b4b]">
                   {new Date(selectedPatient.created_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -2295,7 +2289,7 @@ export default function Patients() {
                     type="button"
                     onClick={savePatientChanges}
                     disabled={isSavingPatient}
-                    className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors disabled:opacity-50"
                   >
                     <Check className="h-4 w-4" />
                     {isSavingPatient ? 'Saving...' : 'Save Changes'}
@@ -2351,8 +2345,8 @@ export default function Patients() {
                 </select>
               </div>
 
-              <div className="mt-4 rounded-lg bg-blue-50 p-3">
-                <p className="text-xs text-blue-700">
+              <div className="mt-4 rounded-lg bg-[#0d1b4b] p-3">
+                <p className="text-xs text-[#0d1b4b]">
                   <span className="font-semibold">Tip:</span> You can filter by level/program first, then select all to bulk update specific groups (e.g., all 4th year college).
                 </p>
               </div>
@@ -2382,3 +2376,7 @@ export default function Patients() {
     </div>
   )
 }
+
+
+
+

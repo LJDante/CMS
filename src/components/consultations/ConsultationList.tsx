@@ -47,7 +47,7 @@ export function ConsultationList({
                     <span className="text-sm font-medium text-slate-600">
                       {format(new Date(consultation.consultation_date), 'PPP p')}
                     </span>
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                    <span className="text-xs bg-[#0d1b4b]/20 text-[#0d1b4b] px-2 py-1 rounded">
                       {consultation.doctor_name || 'No Doctor'}
                     </span>
                   </div>
@@ -72,7 +72,7 @@ export function ConsultationList({
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => onViewNotes(consultation)}
-                    className="text-blue-600 hover:text-blue-700 transition-colors p-1"
+                    className="text-[#0d1b4b] hover:text-[#0d1b4b] transition-colors p-1"
                     title="View Notes"
                   >
                     <MessageSquare className="h-4 w-4" />
@@ -100,3 +100,4 @@ export function ConsultationList({
     </div>
   )
 }
+

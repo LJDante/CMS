@@ -2,6 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  base: '/',   // ← changed from '/CMS/'
+  base: process.env.GITHUB_PAGES ? '/CMS/' : '/',
   plugins: [react()],
 })

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
+  darkMode: 'selector',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -13,12 +13,21 @@ export default {
           100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#1e40af',
-          700: '#1d4ed8',
-          800: '#1e3a8a',
-          900: '#1e293b'
+          400: '#0d1b4b',
+          500: '#0d1b4b', // Navy blue accent
+          600: '#0d1b4b', // Navy blue for header
+          700: '#0d1b4b',
+          800: '#0D1B4B', // Deep navy blue for sidebar
+          900: '#0a1628'  // Darker navy for accents
+        },
+        navy: {
+          900: '#0D1B4B', // Deep navy blue
+          800: '#1a2a5e', // Slightly lighter navy
+          700: '#2a3f7f'
+        },
+        sky: {
+          500: '#0d1b4b', // Sky blue
+          600: '#0d1b4b'  // Navy blue
         }
       },
       animation: {

@@ -189,9 +189,9 @@ export default function RegisterStaffAccount({ hideHeader = false }: RegisterSta
         </form>
       </div>
 
-      <div className="card max-w-2xl border-b-4 border-blue-500 bg-blue-50">
-        <h3 className="mb-3 font-semibold text-slate-900">Account Information</h3>
-        <ul className="space-y-2 text-sm text-slate-700">
+      <div className="card max-w-2xl border-b-4 border-[#0d1b4b] bg-[#0d1b4b]">
+        <h3 className="mb-3 font-semibold text-white">Account Information</h3>
+        <ul className="space-y-2 text-sm text-slate-100">
           <li>• Passwords must be at least 6 characters long</li>
           <li>• Staff can log in immediately after account creation</li>
           <li>• Clinic Doctor and Clinic Staff roles have different permissions</li>
@@ -200,3 +200,4 @@ export default function RegisterStaffAccount({ hideHeader = false }: RegisterSta
     </div>
   )
 }
+

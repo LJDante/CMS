@@ -274,7 +274,7 @@ export default function Dashboard() {
           </p>
         </div>
         {profile?.role === 'clinic_admin' && (
-          <div className="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 shadow-sm dark:border-primary-800 dark:bg-primary-950 dark:text-primary-200">
+          <div className="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 shadow-sm">
             Admin access: staff registration is available below.
           </div>
         )}
@@ -308,11 +308,11 @@ export default function Dashboard() {
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Recent activity</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Latest clinic records and approvals for quick review.</p>
+              <p className="text-lg font-semibold text-slate-900">Recent activity</p>
+              <p className="mt-1 text-sm text-slate-500">Latest clinic records and approvals for quick review.</p>
             </div>
           </div>
           <div className="space-y-4">
@@ -321,19 +321,19 @@ export default function Dashboard() {
                 <Link
                   key={item.id}
                   to={item.path}
-                  className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+                  className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-slate-300 hover:bg-slate-100"
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="font-semibold text-slate-900 dark:text-slate-100">{item.title}</p>
-                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.description}</p>
+                      <p className="font-semibold text-slate-900">{item.title}</p>
+                      <p className="mt-1 text-sm text-slate-500">{item.description}</p>
                     </div>
-                    <p className="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">{formatActivityDate(item.date)}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-400">{formatActivityDate(item.date)}</p>
                   </div>
                 </Link>
               ))
             ) : (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
                 No recent actions are available yet.
               </div>
             )}
@@ -341,27 +341,27 @@ export default function Dashboard() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6">
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Alerts</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Important items that need attention now.</p>
+              <p className="text-lg font-semibold text-slate-900">Alerts</p>
+              <p className="mt-1 text-sm text-slate-500">Important items that need attention now.</p>
             </div>
             <div className="grid gap-4">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium text-slate-500">Low stock items</p>
-                <p className="mt-2 text-2xl font-bold text-slate-800 dark:text-slate-100">{lowStockCount ?? '—'}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-800">{lowStockCount ?? '—'}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium text-slate-500">Pending supply requests</p>
-                <p className="mt-2 text-2xl font-bold text-slate-800 dark:text-slate-100">{pendingRequests ?? '—'}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-800">{pendingRequests ?? '—'}</p>
               </div>
             </div>
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6">
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Quick links</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Jump straight to the most important clinic pages.</p>
+              <p className="text-lg font-semibold text-slate-900">Quick links</p>
+              <p className="mt-1 text-sm text-slate-500">Jump straight to the most important clinic pages.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Link to="/patients" className="btn-outline w-full text-left">Patients</Link>
@@ -377,11 +377,11 @@ export default function Dashboard() {
 
       {profile?.role === 'clinic_admin' && (
         <div className="space-y-6 mt-8">
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Register staff or doctor</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-lg font-semibold text-slate-900">Register staff or doctor</p>
+                <p className="mt-1 text-sm text-slate-500">
                   Create new clinic staff accounts directly from the dashboard.
                 </p>
               </div>
@@ -389,11 +389,11 @@ export default function Dashboard() {
             <RegisterStaffAccount hideHeader />
           </section>
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
               <div>
-                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">Manage Staff Accounts</p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-lg font-semibold text-slate-900">Manage Staff Accounts</p>
+                <p className="mt-1 text-sm text-slate-500">
                   View all staff profiles and remove accounts when needed. You cannot delete your own account.
                 </p>
               </div>
@@ -409,11 +409,11 @@ export default function Dashboard() {
 
             <div className="overflow-x-auto">
               {loadingStaffAccounts ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
                   Loading staff accounts...
                 </div>
               ) : staffAccounts.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
                   No staff accounts are available yet.
                 </div>
               ) : (
@@ -436,11 +436,11 @@ export default function Dashboard() {
                         year: 'numeric'
                       })
                       return (
-                        <tr key={account.id} className="hover:bg-slate-50 dark:hover:bg-slate-900">
-                          <td className="px-4 py-3 text-slate-900 dark:text-slate-100">{account.full_name}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{account.email}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{ROLE_LABELS[account.role]}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-300">{formattedDate}</td>
+                        <tr key={account.id} className="hover:bg-slate-50">
+                          <td className="px-4 py-3 text-slate-900">{account.full_name}</td>
+                          <td className="px-4 py-3 text-slate-500">{account.email}</td>
+                          <td className="px-4 py-3 text-slate-500">{ROLE_LABELS[account.role]}</td>
+                          <td className="px-4 py-3 text-slate-500">{formattedDate}</td>
                           <td className="px-4 py-3">
                             {canDelete ? (
                               <button
@@ -469,4 +469,5 @@ export default function Dashboard() {
     </div>
   )
 }
+
 

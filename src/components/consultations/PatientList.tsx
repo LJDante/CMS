@@ -37,7 +37,7 @@ export function PatientList({ patients, search, onSearchChange, onPatientSelect,
                 onClick={() => onPatientSelect(patient)}
                 className={`w-full text-left p-3 rounded-lg border transition-colors ${
                   selectedPatientId === patient.id
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-[#0d1b4b] bg-[#0d1b4b]/10'
                     : 'border-slate-200 hover:border-slate-300 hover:bg-gray-50'
                 }`}
               >
@@ -58,3 +58,4 @@ export function PatientList({ patients, search, onSearchChange, onPatientSelect,
     </div>
   )
 }
+

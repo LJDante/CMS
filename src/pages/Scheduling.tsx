@@ -872,7 +872,7 @@ const handleDeleteSchedule = async (scheduleId: string) => {
                           openEditModal(schedule)
                           closeDayDetails()
                         }}
-                        className="rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        className="rounded bg-[#0d1b4b] px-3 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b]"
                       >
                         Edit
                       </button>
@@ -1136,3 +1136,4 @@ const handleDeleteSchedule = async (scheduleId: string) => {
     </div>
   )
 }
+

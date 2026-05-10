@@ -358,7 +358,7 @@ export default function Consultations() {
                         (c.status ?? 'pending') === 'completed'
                           ? 'bg-green-100 text-green-800'
                           : (c.status ?? 'pending') === 'follow_up'
-                          ? 'bg-blue-100 text-blue-800'
+                          ? 'bg-[#0d1b4b] text-[#0d1b4b]'
                           : (c.status ?? 'pending') === 'cancelled'
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
@@ -469,7 +469,7 @@ export default function Consultations() {
                   (selectedConsultation.status ?? 'pending') === 'completed'
                     ? 'bg-green-100 text-green-800'
                     : (selectedConsultation.status ?? 'pending') === 'follow_up'
-                    ? 'bg-blue-100 text-blue-800'
+                    ? 'bg-[#0d1b4b] text-[#0d1b4b]'
                     : (selectedConsultation.status ?? 'pending') === 'cancelled'
                     ? 'bg-red-100 text-red-800'
                     : 'bg-yellow-100 text-yellow-800'
@@ -558,3 +558,4 @@ export default function Consultations() {
     </div>
   )
 }
+

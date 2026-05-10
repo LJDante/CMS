@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { LayoutDashboard, ClipboardList, Users, Pill, ClipboardCheck, BarChart2, LogOut, Menu, X, FileText, AlertCircle, Calendar, Activity, MessageSquare, Smile, HardDrive } from 'lucide-react'
 import { getDisplayName } from '../utils/nameFormatter'
-import { DarkModeToggle } from './DarkModeToggle'
 import clsx from 'clsx'
 
 const navSections = [
@@ -55,7 +54,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-white dark:bg-slate-950">
+    <div className="flex min-h-screen bg-white">
       <div
         className={clsx(
           'fixed inset-0 z-40 bg-black/50 lg:hidden',
@@ -65,23 +64,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
       />
       <aside
         className={clsx(
-          'fixed left-0 top-0 z-50 flex h-full w-80 flex-col transform border-r border-slate-200 bg-white shadow-lg transition-transform dark:border-slate-700 dark:bg-slate-900 lg:translate-x-0',
+          'fixed left-0 top-0 z-50 flex h-full w-80 flex-col transform border-r border-slate-200 bg-primary-800 shadow-lg transition-transform lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="space-y-3 border-b border-slate-200 px-4 py-4 dark:border-slate-700">
+        <div className="space-y-3 border-b border-slate-200 px-4 py-4">
           <div className="flex items-center gap-3">
             <img src={import.meta.env.BASE_URL + 'LCCBnLogo.png'} alt="La Consolacion College-Biñan" className="h-11" />
             <div>
-              <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">LCC Biñan Clinic</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">School clinic management</p>
+              <p className="text-lg font-semibold text-white">LCC Biñan Clinic</p>
+              <p className="text-sm text-white/70">School clinic management</p>
             </div>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-28">
           {navSections.map((section) => (
             <div key={section.title} className="mb-4">
-              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+              <p className="mb-3 text-sm font-semibold uppercase tracking-[0.24em] text-white/60">
                 {section.title}
               </p>
               <div className="space-y-1">
@@ -95,14 +94,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       className={clsx(
                         'group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-base transition duration-150',
                         active
-                          ? 'bg-primary-50 text-primary-700 shadow-sm dark:bg-primary-900 dark:text-primary-300'
-                          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800'
+                          ? 'bg-white/10 text-white border-l-4 border-white'
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
                       )}
                     >
                       <span
                         className={clsx(
                           'inline-flex h-10 w-10 items-center justify-center rounded-2xl transition',
-                          active ? 'bg-primary-100 text-primary-700 dark:bg-primary-800 dark:text-primary-200' : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200'
+                          active ? 'bg-white/20 text-white' : 'text-white/60 group-hover:text-white group-hover:bg-white/10'
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -115,16 +114,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           ))}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-gray-50/80 p-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
-          <div className="mb-1 truncate text-base font-semibold text-slate-900 dark:text-slate-100">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-white/20 bg-primary-900/80 p-4 backdrop-blur">
+          <div className="mb-1 truncate text-base font-semibold text-white">
             {getDisplayName(profile?.full_name, profile?.role)}
           </div>
-          <div className="mb-3 text-sm uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
+          <div className="mb-3 text-sm uppercase tracking-[0.18em] text-white/70">
             {profile?.role?.replace(/_/g, ' ')}
           </div>
           <button
             onClick={handleSignOut}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-base font-medium text-slate-700 transition hover:border-slate-300 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-3 py-2 text-base font-medium text-white transition hover:bg-white/20"
           >
             <LogOut className="h-4 w-4" />
             Sign out
@@ -132,24 +131,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
       <div className="flex flex-1 flex-col lg:pl-80">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-primary-600 px-4 backdrop-blur relative">
+          <div className="absolute left-0 top-0 bottom-0 w-0 border-l-8 border-l-primary-900 border-y-8 border-y-transparent"></div>
           <button
-            className="rounded p-2 hover:bg-slate-100 dark:hover:bg-slate-800 lg:hidden"
+            className="rounded p-2 hover:bg-white/10 text-white lg:hidden"
             onClick={() => setSidebarOpen(true)}
           >
-            <Menu className="h-6 w-6 dark:text-slate-400" />
+            <Menu className="h-6 w-6" />
           </button>
-          <h1 className="text-xl font-semibold text-slate-800 dark:text-slate-100">Clinic Dashboard</h1>
+          <h1 className="text-xl font-semibold text-white">Clinic Dashboard</h1>
           <div className="flex-1" />
-          <DarkModeToggle />
         </header>
-        <main className="flex-1 p-4 md:p-6 dark:bg-slate-950">{children}</main>
+        <main className="flex-1 p-4 md:p-6 bg-white">{children}</main>
       </div>
       {showIdleWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900">
-            <h3 className="mb-2 text-xl font-semibold dark:text-slate-100">Inactive — staying signed in?</h3>
-            <p className="mb-4 text-base text-slate-600 dark:text-slate-400">You've been idle. You'll be signed out in {warningSecondsLeft} second{warningSecondsLeft === 1 ? '' : 's'} unless you choose to stay signed in.</p>
+          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-2 text-xl font-semibold text-gray-900">Inactive — staying signed in?</h3>
+            <p className="mb-4 text-base text-gray-600">You've been idle. You'll be signed out in {warningSecondsLeft} second{warningSecondsLeft === 1 ? '' : 's'} unless you choose to stay signed in.</p>
             <div className="flex justify-end gap-2">
               <button className="btn-secondary" onClick={() => { void signOut(); }}>
                 Sign out now

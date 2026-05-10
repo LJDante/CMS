@@ -378,7 +378,7 @@ export default function Requests() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                  className="px-4 py-2 bg-[#0d1b4b] text-white rounded hover:bg-[#0d1b4b] disabled:opacity-50"
                   disabled={selectedItems.length === 0}
                 >
                   Submit Request
@@ -401,4 +401,5 @@ export default function Requests() {
     </div>
   )
 }
+
 

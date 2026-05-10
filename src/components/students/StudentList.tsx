@@ -256,7 +256,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
         {selectedIds.size > 0 && (
           <button
             onClick={() => setShowSexModal(true)}
-            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 rounded bg-[#0d1b4b] px-4 py-2 text-sm font-medium text-white hover:bg-[#0d1b4b] transition-colors"
           >
             <Edit2 className="h-4 w-4" />
             Edit Sex ({selectedIds.size})
@@ -441,7 +441,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
                   <td className="px-4 py-3">
                     <button
                       onClick={() => onViewDetails(s)}
-                      className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                      className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
                       title="View patient details"
                     >
                       <Eye className="h-4 w-4" />
@@ -465,7 +465,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <button
                 onClick={() => void updateSelectedSex('M')}
-                className="w-full rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors disabled:cursor-not-allowed disabled:bg-blue-400"
+                className="w-full rounded bg-[#0d1b4b] px-4 py-2 text-sm font-semibold text-white hover:bg-[#0d1b4b] transition-colors disabled:cursor-not-allowed disabled:bg-[#0d1b4b]"
                 disabled={sexUpdateLoading}
               >
                 Male
@@ -490,3 +490,4 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
     </>
   )
 }
+
