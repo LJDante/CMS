@@ -3,7 +3,8 @@ import { Download, ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import type { InventoryItem, InventoryCategory } from '../types'
 import { useInventoryData, useEndingInventory } from '../hooks'
 import { exportToWord } from '../utils/documentGenerator'
-import { InventoryTable, LowStockAlert, SearchAndFilter, EndingInventoryTable, AddItemForm, EditItemForm } from '../components/inventory'
+import { getExpiryStatus } from '../utils/inventoryHelpers'
+import { InventoryTable, LowStockAlert, ExpiryAlert, SearchAndFilter, EndingInventoryTable, AddItemForm, EditItemForm } from '../components/inventory'
 import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
@@ -15,6 +16,7 @@ export default function Inventory() {
   const [category, setCategory] = useState<InventoryCategory | 'all'>('all')
   const [showForm, setShowForm] = useState(false)
   const [showLowStockOnly, setShowLowStockOnly] = useState(false)
+  const [showExpiringOnly, setShowExpiringOnly] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [endingMode, setEndingMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -30,14 +32,35 @@ export default function Inventory() {
     [items]
   )
 
+  const expiringItems = useMemo(() => {
+    return items.filter(item => {
+      const expiryStatus = getExpiryStatus(item.expiration_date)
+      return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
+    })
+  }, [items])
+
+  const expiredCount = useMemo(() => 
+    items.filter(item => getExpiryStatus(item.expiration_date).status === 'expired').length,
+    [items]
+  )
+
+  const nearExpiryCount = useMemo(() => 
+    items.filter(item => getExpiryStatus(item.expiration_date).status === 'near-expiry').length,
+    [items]
+  )
+
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase())
       const matchesCategory = category === 'all' || item.category === category
       const matchesLowStock = !showLowStockOnly || (item.reorder_level && item.quantity_on_hand <= item.reorder_level)
-      return matchesSearch && matchesCategory && matchesLowStock
+      const matchesExpiring = !showExpiringOnly || (() => {
+        const expiryStatus = getExpiryStatus(item.expiration_date)
+        return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
+      })()
+      return matchesSearch && matchesCategory && matchesLowStock && matchesExpiring
     })
-  }, [items, search, category, showLowStockOnly])
+  }, [items, search, category, showLowStockOnly, showExpiringOnly])
 
   const selectedItems = useMemo(
     () => items.filter(item => selectedIds.has(item.id)),
@@ -264,6 +287,16 @@ export default function Inventory() {
           count={lowStockItems.length}
           showOnly={showLowStockOnly}
           onToggle={() => setShowLowStockOnly(!showLowStockOnly)}
+        />
+      )}
+
+      {/* Expiry Alert - only show in regular mode */}
+      {!endingMode && (
+        <ExpiryAlert
+          expiredCount={expiredCount}
+          nearExpiryCount={nearExpiryCount}
+          showOnly={showExpiringOnly}
+          onToggle={() => setShowExpiringOnly(!showExpiringOnly)}
         />
       )}
 

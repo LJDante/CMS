@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../contexts/AuthContext'
 import RegisterStaffAccount from './RegisterStaffAccount'
+import { getExpiryStatus } from '../utils/inventoryHelpers'
 import type { ClinicVisit, Profile, Role } from '../types'
 import { format, addDays } from 'date-fns'
 
@@ -39,6 +40,7 @@ const ROLE_LABELS: Record<Role, string> = {
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [lowStockCount, setLowStockCount] = useState<number | null>(null)
+  const [expiringCount, setExpiringCount] = useState<number | null>(null)
   const [pendingRequests, setPendingRequests] = useState<number | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([])
   const [patientNames, setPatientNames] = useState<Record<string, string>>({})
@@ -63,7 +65,7 @@ export default function Dashboard() {
           .lt('visit_date', end),
         supabase
           .from('inventory')
-          .select('id,quantity_on_hand,reorder_level'),
+          .select('id,quantity_on_hand,reorder_level,expiration_date'),
         supabase
           .from('supply_requests')
           .select('id')
@@ -106,13 +108,19 @@ export default function Dashboard() {
         returnedToClass
       })
 
-      const inventoryData = inventoryResult.status === 'fulfilled' && !inventoryResult.value.error ? (inventoryResult.value.data as Array<{ id: string; quantity_on_hand: number; reorder_level: number | null }>) : []
+      const inventoryData = inventoryResult.status === 'fulfilled' && !inventoryResult.value.error ? (inventoryResult.value.data as Array<{ id: string; quantity_on_hand: number; reorder_level: number | null; expiration_date: string | null }>) : []
       if (inventoryResult.status === 'rejected' || (inventoryResult.status === 'fulfilled' && inventoryResult.value.error)) {
         // eslint-disable-next-line no-console
         console.error('Inventory load failed', inventoryResult.status === 'rejected' ? inventoryResult.reason : inventoryResult.value.error)
       }
       setLowStockCount(
         inventoryData.filter((item) => item.reorder_level !== null && item.quantity_on_hand <= item.reorder_level).length
+      )
+      setExpiringCount(
+        inventoryData.filter((item) => {
+          const expiryStatus = getExpiryStatus(item.expiration_date)
+          return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
+        }).length
       )
 
       const pendingData = pendingRequestsResult.status === 'fulfilled' && !pendingRequestsResult.value.error ? pendingRequestsResult.value.data : []
@@ -354,6 +362,10 @@ export default function Dashboard() {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <p className="text-sm font-medium text-slate-500">Pending supply requests</p>
                 <p className="mt-2 text-2xl font-bold text-slate-800">{pendingRequests ?? '—'}</p>
+              </div>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-medium text-red-600">Medicines expiring soon</p>
+                <p className="mt-2 text-2xl font-bold text-red-700">{expiringCount ?? '—'}</p>
               </div>
             </div>
           </section>

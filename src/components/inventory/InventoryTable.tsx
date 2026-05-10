@@ -1,6 +1,7 @@
-import { Search, Plus, AlertCircle, Edit2, Trash2 } from 'lucide-react'
+import { Search, Plus, AlertCircle, Edit2, Trash2, AlertTriangle } from 'lucide-react'
 import type { InventoryItem, InventoryCategory } from '../../types'
 import type { EditFormData } from '../../types/inventory'
+import { getExpiryStatus, getExpiryMessage } from '../../utils/inventoryHelpers'
 
 interface InventoryTableProps {
   items: InventoryItem[]
@@ -31,12 +32,14 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
             <th className="px-4 py-3 font-medium">On hand</th>
             <th className="px-4 py-3 font-medium">Unit</th>
             <th className="px-4 py-3 font-medium">Reorder level</th>
+            <th className="px-4 py-3 font-medium">Expires</th>
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody>
           {items.map((item) => {
             const isSelected = selectedIds.has(item.id)
+            const expiryStatus = getExpiryStatus(item.expiration_date)
             return (
               <tr
                 key={item.id}
@@ -62,6 +65,21 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
                 </td>
                 <td className="px-4 py-3">{item.unit}</td>
                 <td className="px-4 py-3">{item.reorder_level ?? '—'}</td>
+                <td className="px-4 py-3">
+                  {expiryStatus.status === 'no-date' ? (
+                    <span className="text-slate-500">—</span>
+                  ) : expiryStatus.status === 'expired' ? (
+                    <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
+                      Expired
+                    </span>
+                  ) : expiryStatus.status === 'near-expiry' ? (
+                    <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
+                      Expires soon
+                    </span>
+                  ) : (
+                    <span className="text-slate-600">{item.expiration_date}</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 flex gap-2">
                   <button
                     onClick={() => onEdit(item)}
@@ -124,6 +142,48 @@ export function LowStockAlert({ count, showOnly, onToggle }: LowStockAlertProps)
           }`}
         >
           {showOnly ? 'Show All' : 'View Low Stock'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+interface ExpiryAlertProps {
+  expiredCount: number
+  nearExpiryCount: number
+  showOnly: boolean
+  onToggle: () => void
+}
+
+export function ExpiryAlert({ expiredCount, nearExpiryCount, showOnly, onToggle }: ExpiryAlertProps) {
+  const totalCount = expiredCount + nearExpiryCount
+  if (totalCount === 0) return null
+
+  return (
+    <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="font-semibold text-red-900">
+              {totalCount} {totalCount === 1 ? 'medicine' : 'medicines'} expiring or expired
+            </h3>
+            <p className="mt-1 text-sm text-red-800">
+              {expiredCount > 0 && `${expiredCount} expired`}
+              {expiredCount > 0 && nearExpiryCount > 0 && ' • '}
+              {nearExpiryCount > 0 && `${nearExpiryCount} expiring soon`}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onToggle}
+          className={`whitespace-nowrap rounded px-3 py-1 text-sm font-medium transition-colors ${
+            showOnly
+              ? 'bg-red-600 text-white'
+              : 'bg-red-100 text-red-700 hover:bg-red-200'
+          }`}
+        >
+          {showOnly ? 'Show All' : 'View Expiring'}
         </button>
       </div>
     </div>
