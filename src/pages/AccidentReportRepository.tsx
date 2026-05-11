@@ -279,7 +279,7 @@ export default function AccidentReportRepository() {
                         <button
                           onClick={() => handlePreview(report.file_url)}
                           title="Preview document"
-                          className="p-2 hover:bg-[#0d1b4b] text-[#0d1b4b] rounded-lg transition"
+                          className="p-2 text-[#0d1b4b] rounded-lg transition hover:bg-gray-100"
                         >
                           <Eye className="h-4 w-4" />
                         </button>

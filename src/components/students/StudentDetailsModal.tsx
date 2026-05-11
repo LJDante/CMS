@@ -944,8 +944,8 @@ export function StudentDetailsModal({ student, isOpen, onClose, role, onStudentU
 
           {/* Registration Date */}
           <div className="rounded-lg bg-[#0d1b4b] p-4">
-            <label className="text-xs font-medium text-[#0d1b4b] uppercase tracking-wide">Registration Date</label>
-            <p className="text-sm mt-1 text-[#0d1b4b]">
+            <label className="text-xs font-medium text-white uppercase tracking-wide">Registration Date</label>
+            <p className="text-sm mt-1 text-white">
               {new Date(student.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',

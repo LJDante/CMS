@@ -49,7 +49,7 @@ export interface Patient {
   city?: string
   province?: string
   zip_code?: string
-  enrollment_status?: 'active' | 'inactive'
+  patient_status?: 'active' | 'inactive'
   created_at: string
 }
 

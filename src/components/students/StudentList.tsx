@@ -441,7 +441,7 @@ export function StudentList({ students, search, onSearchChange, onViewDetails, o
                   <td className="px-4 py-3">
                     <button
                       onClick={() => onViewDetails(s)}
-                      className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
+                      className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] hover:text-white transition-colors"
                       title="View patient details"
                     >
                       <Eye className="h-4 w-4" />
