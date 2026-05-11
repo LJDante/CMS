@@ -37,12 +37,15 @@ import Papa from 'papaparse'
 type InstitutionType = 'all' | 'k12' | 'college' | 'personnel'
 type GradeLevel = string
 type GuardianFilter = 'all' | 'has-contact' | 'no-contact'
+type PatientWithStatus = Student & {
+  patient_status?: 'active' | 'inactive' | null
+}
 
 export default function Patients() {
   const { profile } = useAuth()
-  const [patients, setPatients] = useState<Student[]>([])
+  const [patients, setPatients] = useState<PatientWithStatus[]>([])
   const [search, setSearch] = useState('')
-  const [selectedPatient, setSelectedPatient] = useState<Student | null>(null)
+  const [selectedPatient, setSelectedPatient] = useState<PatientWithStatus | null>(null)
   const [showDetails, setShowDetails] = useState(false)
   const [loading, setLoading] = useState(true)
   const [medicalHistory, setMedicalHistory] = useState<ClinicVisit[]>([])
@@ -52,7 +55,7 @@ export default function Patients() {
   // Edit patient info states
   const [isEditingPatient, setIsEditingPatient] = useState(false)
   const [isSavingPatient, setIsSavingPatient] = useState(false)
-  type EditablePatient = Omit<Student, 'education_level'> & {
+  type EditablePatient = Omit<PatientWithStatus, 'education_level'> & {
     education_level?: EducationLevel
     shs_track?: string
     mother_last_name?: string
@@ -92,17 +95,21 @@ export default function Patients() {
 
   const loadPatients = async () => {
     setLoading(true)
+    // Force fresh data by adding a timestamp parameter to bypass any caching
+    const timestamp = Date.now()
     const { data, error } = await supabase
       .from('patients')
       .select('*')
       .order('last_name')
+      .limit(1000) // Ensure we get all patients
     
     if (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to load patients', error)
       setPatients([])
     } else {
-      setPatients((data ?? []) as Student[])
+      console.log(`Loaded ${data?.length} patients at ${timestamp}:`, data?.slice(0, 3).map(p => ({ id: p.id, patient_status: p.patient_status })))
+      setPatients((data ?? []) as PatientWithStatus[])
     }
     setLoading(false)
   }
@@ -111,6 +118,11 @@ export default function Patients() {
   useEffect(() => {
     void loadPatients()
   }, [])
+
+  // Debug: Log when patients state changes
+  useEffect(() => {
+    console.log('Patients state updated:', patients.slice(0, 3).map(p => ({ id: p.id, patient_status: p.patient_status })))
+  }, [patients])
 
   // Fetch available sections when grade level changes
   useEffect(() => {
@@ -241,11 +253,11 @@ export default function Patients() {
       // Update database
       await supabase
         .from('patients')
-        .update({ enrollment_status: status })
+        .update({ patient_status: status })
         .eq('id', selectedPatient.id)
 
       // Update selectedPatient state
-      const updatedPatient = { ...selectedPatient, enrollment_status: status }
+      const updatedPatient = { ...selectedPatient, patient_status: status }
       setSelectedPatient(updatedPatient)
 
       // Update patients array (use functional update to avoid stale closure)
@@ -267,22 +279,41 @@ export default function Patients() {
 
     try {
       const idsArray = Array.from(selectedIds)
-      // Since Supabase doesn't have direct bulk update in the SDK,
-      // we'll update them individually but efficiently
-      const updatePromises = idsArray.map((id) =>
-        supabase
-          .from('patients')
-          .update({ enrollment_status: bulkStatus })
-          .eq('id', id)
-      )
+      let successCount = 0
+      let failCount = 0
 
-      await Promise.all(updatePromises)
-      
-      toast.success(`Updated ${selectedIds.size} patient(s) to ${bulkStatus}`)
+      // Update each patient individually to handle errors gracefully
+      for (const id of idsArray) {
+        try {
+          const { error } = await supabase
+            .from('patients')
+            .update({ patient_status: bulkStatus })
+            .eq('id', id)
+
+          if (error) {
+            console.error(`Failed to update patient ${id}:`, error)
+            failCount++
+          } else {
+            successCount++
+          }
+        } catch (error) {
+          console.error(`Failed to update patient ${id}:`, error)
+          failCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully updated ${successCount} patient(s) to ${bulkStatus}`)
+      }
+
+      if (failCount > 0) {
+        toast.error(`Failed to update ${failCount} patient(s)`)
+      }
+
       setShowBulkActions(false)
       setSelectedIds(new Set())
-      
-      // Reload patients
+
+      // Reload patients to reflect changes
       const { data } = await supabase
         .from('patients')
         .select('*')
@@ -589,7 +620,7 @@ export default function Patients() {
       }
 
       // Update states
-      const updatedPatient = { ...selectedPatient, ...updateData } as Student
+      const updatedPatient = { ...selectedPatient, ...updateData } as PatientWithStatus
       setSelectedPatient(updatedPatient)
       setPatients((prev) => prev.map(p => p.id === selectedPatient.id ? updatedPatient : p))
       setIsEditingPatient(false)
@@ -602,7 +633,7 @@ export default function Patients() {
     }
   }
 
-  const displayPatient: Student | EditablePatient | null = isEditingPatient ? editedPatient : selectedPatient
+  const displayPatient: PatientWithStatus | EditablePatient | null = isEditingPatient ? editedPatient : selectedPatient
   const displayEditablePatient = displayPatient as EditablePatient | null
   const displayEducationLevel: EducationLevel | undefined = displayPatient?.education_level as EducationLevel | undefined
 
@@ -689,7 +720,7 @@ export default function Patients() {
     return true
   })
 
-  const levelDisplay = (s: Student) => {
+  const levelDisplay = (s: PatientWithStatus) => {
     if (s.education_level === 'shs' && s.program && (s.grade_level || s.year_level)) {
       return `${s.program}-${s.grade_level || s.year_level}`
     }
@@ -981,7 +1012,7 @@ export default function Patients() {
           'Allergies': p.allergies || 'N/A',
           'Diagnosed Diseases': p.diagnosed_diseases || 'N/A',
           'Address': p.address_field?.trim() || 'N/A',
-          'Patient Status': p.enrollment_status || 'active'
+          'Patient Status': p.patient_status || 'active'
         }
         return obj
       })
@@ -1237,18 +1268,18 @@ export default function Patients() {
       {selectedIds.size > 0 && (
         <div className="mt-4 flex items-center justify-between rounded-lg bg-[#0d1b4b] border border-[#0d1b4b] p-4">
           <div className="flex items-center gap-4">
-            <p className="text-sm font-medium text-[#0d1b4b]">
+            <p className="text-sm font-medium text-white">
               {selectedIds.size} patient{selectedIds.size !== 1 ? 's' : ''} selected
             </p>
             <button
               onClick={selectAll}
-              className="text-xs text-[#0d1b4b] hover:text-[#0d1b4b] font-medium"
+              className="text-xs text-white hover:text-gray-200 font-medium"
             >
               Select All {filtered.length}
             </button>
             <button
               onClick={clearSelection}
-              className="text-xs text-[#0d1b4b] hover:text-[#0d1b4b] font-medium"
+              className="text-xs text-white hover:text-gray-200 font-medium"
             >
               Clear
             </button>
@@ -1351,9 +1382,10 @@ export default function Patients() {
                     <td className="px-4 py-3 capitalize text-slate-900">{p.patient_type}</td>
                     <td className="px-4 py-3 text-slate-900">{levelDisplay(p)}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${(p.enrollment_status ?? 'active') === 'inactive' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${(p.patient_status ?? 'active') === 'inactive' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
                         <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-current"></span>
-                        {(p.enrollment_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
+                        {(p.patient_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
+                        {p.patient_status === null && <span title="Status is null in database"> (null)</span>}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-900">{p.contact_number || 'N/A'}</td>
@@ -1361,13 +1393,13 @@ export default function Patients() {
                       <button
                         onClick={() => {
                               setSelectedPatient(p)
-                              const currentStatus = p.enrollment_status ?? 'active'
+                              const currentStatus = p.patient_status ?? 'active'
                               setStatus(currentStatus)
                               setEditingStatus(false)
                               setShowDetails(true)
                               void loadMedicalHistory(p.id)
                             }}
-                        className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] transition-colors"
+                        className="inline-flex items-center gap-2 rounded px-3 py-1 text-xs font-medium text-[#0d1b4b] hover:bg-[#0d1b4b] hover:text-white transition-colors"
                         title="View patient details"
                       >
                         <Eye className="h-4 w-4" />
@@ -2196,9 +2228,9 @@ export default function Patients() {
                     </div>
                   ) : (
                     <div>
-                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(selectedPatient.enrollment_status ?? 'active') === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${(selectedPatient.patient_status ?? 'active') === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         <span className="mr-2 inline-block h-1.5 w-1.5 rounded-full bg-current"></span>
-                        {(selectedPatient.enrollment_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
+                        {(selectedPatient.patient_status ?? 'active') === 'active' ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   )}
@@ -2260,8 +2292,8 @@ export default function Patients() {
 
               {/* Registration Date */}
               <div className="rounded-lg bg-[#0d1b4b] p-4">
-                <label className="text-xs font-medium text-[#0d1b4b] uppercase tracking-wide">Registration Date</label>
-                <p className="text-sm mt-1 text-[#0d1b4b]">
+                <label className="text-xs font-medium text-white uppercase tracking-wide">Registration Date</label>
+                <p className="text-sm mt-1 text-white">
                   {new Date(selectedPatient.created_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -2346,7 +2378,7 @@ export default function Patients() {
               </div>
 
               <div className="mt-4 rounded-lg bg-[#0d1b4b] p-3">
-                <p className="text-xs text-[#0d1b4b]">
+                <p className="text-xs text-white">
                   <span className="font-semibold">Tip:</span> You can filter by level/program first, then select all to bulk update specific groups (e.g., all 4th year college).
                 </p>
               </div>
