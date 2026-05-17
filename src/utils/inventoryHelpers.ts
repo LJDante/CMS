@@ -2,6 +2,23 @@
  * Inventory helper utilities for tracking expiration dates
  */
 
+/** True when a reorder threshold is set and on-hand quantity is at or below it. */
+export function isLowStock(
+  quantityOnHand: number,
+  reorderLevel: number | null | undefined
+): boolean {
+  return reorderLevel != null && reorderLevel > 0 && quantityOnHand <= reorderLevel
+}
+
+/** Parse quantity / reorder fields as non-negative integers (avoids string concat bugs). */
+export function parseInventoryInteger(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.trunc(value))
+  }
+  const parsed = parseInt(String(value ?? '').trim(), 10)
+  return Number.isNaN(parsed) ? 0 : Math.max(0, parsed)
+}
+
 export interface ExpiryStatus {
   isExpired: boolean
   isNearExpiry: boolean

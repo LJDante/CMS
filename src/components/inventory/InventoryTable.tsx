@@ -1,7 +1,7 @@
 import { Search, Plus, AlertCircle, Edit2, Trash2, AlertTriangle } from 'lucide-react'
 import type { InventoryItem, InventoryCategory } from '../../types'
 import type { EditFormData } from '../../types/inventory'
-import { getExpiryStatus, getExpiryMessage } from '../../utils/inventoryHelpers'
+import { getExpiryStatus, getExpiryMessage, isLowStock } from '../../utils/inventoryHelpers'
 
 interface InventoryTableProps {
   items: InventoryItem[]
@@ -11,9 +11,20 @@ interface InventoryTableProps {
   onToggleItem: (id: string) => void
   allVisibleSelected: boolean
   onToggleAll: () => void
+  /** Days ahead (and including today) to treat as near-expiry; from clinic_settings.expiry_warning_days */
+  expiryWarningDays?: number
 }
 
-export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleItem, allVisibleSelected, onToggleAll }: InventoryTableProps) {
+export function InventoryTable({
+  items,
+  onEdit,
+  onDelete,
+  selectedIds,
+  onToggleItem,
+  allVisibleSelected,
+  onToggleAll,
+  expiryWarningDays = 30,
+}: InventoryTableProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-left text-sm">
@@ -39,11 +50,17 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
         <tbody>
           {items.map((item) => {
             const isSelected = selectedIds.has(item.id)
-            const expiryStatus = getExpiryStatus(item.expiration_date)
+            const expiryStatus = getExpiryStatus(item.expiration_date, expiryWarningDays)
+            const rowTint =
+              expiryStatus.status === 'expired'
+                ? 'bg-red-50 hover:bg-red-100/90'
+                : expiryStatus.status === 'near-expiry'
+                  ? 'bg-amber-50 hover:bg-amber-100/80'
+                  : ''
             return (
               <tr
                 key={item.id}
-                className={`border-b border-slate-100 ${isSelected ? 'bg-[#0d1b4b]/10 hover:bg-[#0d1b4b]/20' : 'hover:bg-gray-50'}`}
+                className={`border-b border-slate-100 ${isSelected ? 'bg-[#0d1b4b]/10 hover:bg-[#0d1b4b]/20' : rowTint || 'hover:bg-gray-50'}`}
               >
                 <td className="px-4 py-3">
                   <input
@@ -57,11 +74,11 @@ export function InventoryTable({ items, onEdit, onDelete, selectedIds, onToggleI
                 <td className="px-4 py-3 capitalize">{item.category}</td>
                 <td className="px-4 py-3">
                   {item.quantity_on_hand}
-                  {item.reorder_level && item.quantity_on_hand <= item.reorder_level && (
+                  {isLowStock(item.quantity_on_hand, item.reorder_level) ? (
                     <span className="ml-2 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
                       Low stock
                     </span>
-                  )}
+                  ) : null}
                 </td>
                 <td className="px-4 py-3">{item.unit}</td>
                 <td className="px-4 py-3">{item.reorder_level ?? '—'}</td>

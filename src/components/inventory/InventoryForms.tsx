@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { InventoryCategory } from '../../types'
 import type { InventoryFormData, EditFormData } from '../../types/inventory'
+import { parseInventoryInteger } from '../../utils/inventoryHelpers'
 
 interface AddItemFormProps {
   onSubmit: (data: InventoryFormData) => Promise<void>
@@ -20,7 +21,11 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onSubmit(form)
+    await onSubmit({
+      ...form,
+      quantity_on_hand: parseInventoryInteger(form.quantity_on_hand),
+      reorder_level: parseInventoryInteger(form.reorder_level),
+    })
     setForm({
       name: '',
       category: 'medicine',
@@ -77,7 +82,9 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
                 type="number"
                 className="input-field"
                 value={form.quantity_on_hand}
-                onChange={(e) => setForm(f => ({ ...f, quantity_on_hand: Number(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, quantity_on_hand: parseInventoryInteger(e.target.value) }))
+                }
                 min={0}
               />
             </div>
@@ -87,7 +94,9 @@ export function AddItemForm({ onSubmit, onCancel }: AddItemFormProps) {
                 type="number"
                 className="input-field"
                 value={form.reorder_level}
-                onChange={(e) => setForm(f => ({ ...f, reorder_level: Number(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, reorder_level: parseInventoryInteger(e.target.value) }))
+                }
                 min={0}
               />
             </div>
@@ -135,7 +144,11 @@ export function EditItemForm({ initialData, onSubmit, onCancel }: EditItemFormPr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    await onSubmit(form)
+    await onSubmit({
+      ...form,
+      quantity_on_hand: parseInventoryInteger(form.quantity_on_hand),
+      reorder_level: parseInventoryInteger(form.reorder_level),
+    })
   }
 
   return (
@@ -149,7 +162,9 @@ export function EditItemForm({ initialData, onSubmit, onCancel }: EditItemFormPr
               type="number"
               className="input-field"
               value={form.quantity_on_hand}
-              onChange={(e) => setForm(f => ({ ...f, quantity_on_hand: Number(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, quantity_on_hand: parseInventoryInteger(e.target.value) }))
+              }
               min={0}
               required
             />
@@ -160,7 +175,9 @@ export function EditItemForm({ initialData, onSubmit, onCancel }: EditItemFormPr
               type="number"
               className="input-field"
               value={form.reorder_level}
-              onChange={(e) => setForm(f => ({ ...f, reorder_level: Number(e.target.value) || 0 }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, reorder_level: parseInventoryInteger(e.target.value) }))
+              }
               min={0}
               required
             />

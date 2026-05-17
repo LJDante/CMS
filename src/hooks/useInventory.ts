@@ -2,7 +2,27 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { InventoryItem } from '../types.ts'
 import type { EndingInventoryItem, InventoryFormData, EditFormData } from '../types/inventory'
+import { parseInventoryInteger } from '../utils/inventoryHelpers'
 import toast from 'react-hot-toast'
+
+function normalizeInventoryFormData(formData: InventoryFormData): InventoryFormData {
+  return {
+    ...formData,
+    quantity_on_hand: parseInventoryInteger(formData.quantity_on_hand),
+    reorder_level: parseInventoryInteger(formData.reorder_level),
+  }
+}
+
+function normalizeEditFormData(updates: Partial<EditFormData>): Partial<EditFormData> {
+  const normalized: Partial<EditFormData> = { ...updates }
+  if (updates.quantity_on_hand !== undefined) {
+    normalized.quantity_on_hand = parseInventoryInteger(updates.quantity_on_hand)
+  }
+  if (updates.reorder_level !== undefined) {
+    normalized.reorder_level = parseInventoryInteger(updates.reorder_level)
+  }
+  return normalized
+}
 
 // Hook for managing inventory data
 export function useInventoryData() {
@@ -22,7 +42,14 @@ export function useInventoryData() {
 
       if (error) throw error
 
-      setItems((data ?? []) as InventoryItem[])
+      setItems(
+        ((data ?? []) as InventoryItem[]).map((item) => ({
+          ...item,
+          quantity_on_hand: parseInventoryInteger(item.quantity_on_hand),
+          reorder_level:
+            item.reorder_level != null ? parseInventoryInteger(item.reorder_level) : item.reorder_level,
+        }))
+      )
     } catch (error) {
       toast.error('Failed to load inventory')
     } finally {
@@ -48,10 +75,11 @@ export function useInventoryData() {
         throw new Error('An item with this name and category already exists.')
       }
 
-      console.log('Inserting new item...')
+      const payload = normalizeInventoryFormData(formData)
+      console.log('Inserting new item...', payload)
       const { data, error } = await supabase
         .from('inventory')
-        .insert(formData)
+        .insert(payload)
         .select()
         .single()
 
@@ -59,7 +87,18 @@ export function useInventoryData() {
 
       if (error) throw error
 
-      setItems(prev => [...prev, data as InventoryItem])
+      const inserted = data as InventoryItem
+      setItems(prev => [
+        ...prev,
+        {
+          ...inserted,
+          quantity_on_hand: parseInventoryInteger(inserted.quantity_on_hand),
+          reorder_level:
+            inserted.reorder_level != null
+              ? parseInventoryInteger(inserted.reorder_level)
+              : inserted.reorder_level,
+        },
+      ])
       toast.success('Item added')
     } catch (error) {
       console.error('addItem error:', error)
@@ -68,16 +107,17 @@ export function useInventoryData() {
   }
 
   const updateItem = async (id: string, updates: Partial<EditFormData>) => {
+    const payload = normalizeEditFormData(updates)
     const { error } = await supabase
       .from('inventory')
-      .update(updates)
+      .update(payload)
       .eq('id', id)
 
     if (error) throw error
 
     setItems(prev =>
       prev.map(item =>
-        item.id === id ? { ...item, ...updates } : item
+        item.id === id ? { ...item, ...payload } : item
       )
     )
     toast.success('Item updated')

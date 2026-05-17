@@ -1,17 +1,32 @@
-import { useState, useMemo } from 'react'
-import { Download, ArrowLeft, Plus, Trash2 } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Download, ArrowLeft, Plus, Trash2, Settings2 } from 'lucide-react'
 import type { InventoryItem, InventoryCategory } from '../types'
 import { useInventoryData, useEndingInventory } from '../hooks'
 import { exportToWord } from '../utils/documentGenerator'
-import { getExpiryStatus } from '../utils/inventoryHelpers'
-import { InventoryTable, LowStockAlert, ExpiryAlert, SearchAndFilter, EndingInventoryTable, AddItemForm, EditItemForm } from '../components/inventory'
-import toast from 'react-hot-toast'
+import { getExpiryStatus, isLowStock } from '../utils/inventoryHelpers'
+import {
+  InventoryTable,
+  LowStockAlert,
+  SearchAndFilter,
+  EndingInventoryTable,
+  AddItemForm,
+  EditItemForm,
+  ExpiryWarningBanner,
+  ExpirySettingsModal,
+} from '../components/inventory'
+import { supabase } from '../lib/supabaseClient'
+import { useAuth } from '../contexts/AuthContext'
+  import toast from 'react-hot-toast'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import { format } from 'date-fns'
 
 export default function Inventory() {
+  const { user } = useAuth()
   const { items, loading, addItem: addInventoryItem, updateItem: updateInventoryItem, deleteItem: deleteInventoryItem, deleteItems: deleteInventoryItems } = useInventoryData()
+  const [warningDays, setWarningDays] = useState(30)
+  const [showExpirySettings, setShowExpirySettings] = useState(false)
+  const [savingExpirySettings, setSavingExpirySettings] = useState(false)
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<InventoryCategory | 'all'>('all')
   const [showForm, setShowForm] = useState(false)
@@ -26,41 +41,56 @@ export default function Inventory() {
   const { endingItems, updateItem, addItem, deleteItem } = useEndingInventory(items)
   const [signature, setSignature] = useState('')
 
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const { data, error } = await supabase.from('clinic_settings').select('value').eq('key', 'expiry_warning_days').maybeSingle()
+      if (cancelled) return
+      if (error) {
+        if (!/relation|does not exist/i.test(String(error.message || ''))) {
+          console.error('clinic_settings load failed', error)
+        }
+        return
+      }
+      const parsed = parseInt(data?.value ?? '30', 10)
+      if (!Number.isNaN(parsed) && parsed >= 0) setWarningDays(Math.min(3650, parsed))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Computed values
   const lowStockItems = useMemo(() =>
-    items.filter(item => item.reorder_level && item.quantity_on_hand <= item.reorder_level),
+    items.filter(item => isLowStock(item.quantity_on_hand, item.reorder_level)),
     [items]
   )
 
   const expiringItems = useMemo(() => {
-    return items.filter(item => {
-      const expiryStatus = getExpiryStatus(item.expiration_date)
-      return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
-    })
-  }, [items])
-
-  const expiredCount = useMemo(() => 
-    items.filter(item => getExpiryStatus(item.expiration_date).status === 'expired').length,
-    [items]
-  )
-
-  const nearExpiryCount = useMemo(() => 
-    items.filter(item => getExpiryStatus(item.expiration_date).status === 'near-expiry').length,
-    [items]
-  )
+    return items
+      .filter((item) => {
+        const expiryStatus = getExpiryStatus(item.expiration_date, warningDays)
+        return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
+      })
+      .sort((a, b) => {
+        const ta = a.expiration_date ? new Date(a.expiration_date + 'T12:00:00').getTime() : 0
+        const tb = b.expiration_date ? new Date(b.expiration_date + 'T12:00:00').getTime() : 0
+        return ta - tb
+      })
+  }, [items, warningDays])
 
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase())
       const matchesCategory = category === 'all' || item.category === category
-      const matchesLowStock = !showLowStockOnly || (item.reorder_level && item.quantity_on_hand <= item.reorder_level)
+      const matchesLowStock = !showLowStockOnly || isLowStock(item.quantity_on_hand, item.reorder_level)
       const matchesExpiring = !showExpiringOnly || (() => {
-        const expiryStatus = getExpiryStatus(item.expiration_date)
+        const expiryStatus = getExpiryStatus(item.expiration_date, warningDays)
         return expiryStatus.status === 'expired' || expiryStatus.status === 'near-expiry'
       })()
       return matchesSearch && matchesCategory && matchesLowStock && matchesExpiring
     })
-  }, [items, search, category, showLowStockOnly, showExpiringOnly])
+  }, [items, search, category, showLowStockOnly, showExpiringOnly, warningDays])
 
   const selectedItems = useMemo(
     () => items.filter(item => selectedIds.has(item.id)),
@@ -147,6 +177,39 @@ export default function Inventory() {
       })
     } catch (error) {
       toast.error('Failed to delete item')
+    }
+  }
+
+  const handleSaveExpiryThreshold = async (days: number) => {
+    const uid = user?.id
+    if (!uid) {
+      toast.error('You must be signed in to save settings.')
+      return
+    }
+    setSavingExpirySettings(true)
+    try {
+      const { error } = await supabase.from('clinic_settings').upsert(
+        {
+          key: 'expiry_warning_days',
+          value: String(days),
+          updated_by: uid,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'key' }
+      )
+      if (error) throw error
+      setWarningDays(days)
+      setShowExpirySettings(false)
+      toast.success('Expiry reminder threshold saved.')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Could not save settings.'
+      toast.error(
+        /relation|does not exist/i.test(msg)
+          ? 'Database table clinic_settings is missing. Apply the latest migration (20260514_clinic_settings_expiry.sql).'
+          : msg
+      )
+    } finally {
+      setSavingExpirySettings(false)
     }
   }
 
@@ -255,6 +318,14 @@ export default function Inventory() {
           ) : (
             <>
               <button
+                type="button"
+                className="btn-secondary flex items-center gap-2"
+                onClick={() => setShowExpirySettings(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+                Expiry settings
+              </button>
+              <button
                 className="btn-primary flex items-center gap-2"
                 onClick={() => {
                   setShowForm(true)
@@ -281,22 +352,22 @@ export default function Inventory() {
         </div>
       </div>
 
+      {!endingMode && (
+        <ExpiryWarningBanner
+          expiringItems={expiringItems}
+          warningDays={warningDays}
+          showExpiringOnly={showExpiringOnly}
+          onToggleExpiringOnly={() => setShowExpiringOnly(!showExpiringOnly)}
+          onOpenSettings={() => setShowExpirySettings(true)}
+        />
+      )}
+
       {/* Low Stock Alert - only show in regular mode */}
       {!endingMode && (
         <LowStockAlert
           count={lowStockItems.length}
           showOnly={showLowStockOnly}
           onToggle={() => setShowLowStockOnly(!showLowStockOnly)}
-        />
-      )}
-
-      {/* Expiry Alert - only show in regular mode */}
-      {!endingMode && (
-        <ExpiryAlert
-          expiredCount={expiredCount}
-          nearExpiryCount={nearExpiryCount}
-          showOnly={showExpiringOnly}
-          onToggle={() => setShowExpiringOnly(!showExpiringOnly)}
         />
       )}
 
@@ -347,6 +418,7 @@ export default function Inventory() {
             onToggleItem={toggleSelectRow}
             allVisibleSelected={isAllVisibleSelected}
             onToggleAll={toggleSelectAll}
+            expiryWarningDays={warningDays}
           />
         )}
       </div>
@@ -372,6 +444,14 @@ export default function Inventory() {
           onCancel={() => setEditingId(null)}
         />
       )}
+
+      <ExpirySettingsModal
+        open={showExpirySettings}
+        initialDays={warningDays}
+        saving={savingExpirySettings}
+        onClose={() => setShowExpirySettings(false)}
+        onSave={handleSaveExpiryThreshold}
+      />
 
       {showBulkDeleteModal && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 px-4 py-6">

@@ -17,6 +17,7 @@ export async function backupAllData() {
       'witnesses',
       'notifications',
       'inventory',
+      'clinic_settings',
       'supply_requests',
       'supply_request_items'
     ]

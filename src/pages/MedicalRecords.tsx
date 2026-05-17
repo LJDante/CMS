@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import type { MedicalRecord, Student, ClinicVisit } from '../types.ts'
+import type { InventoryItem, MedicalRecord, Student, ClinicVisit } from '../types.ts'
 import { Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
 import { getDisplayName } from '../utils/nameFormatter'
+import IndividualHealthRecordForm from '../components/IndividualHealthRecordForm'
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return 'N/A'
@@ -33,9 +34,14 @@ export default function MedicalRecords() {
   const [editingPatientInfo, setEditingPatientInfo] = useState(false)
   const [patientInfo, setPatientInfo] = useState<Partial<Student>>({})
   const [medicalHistory, setMedicalHistory] = useState<ClinicVisit[]>([])
+  const [administeredMedicineHistory, setAdministeredMedicineHistory] = useState<Array<{ id: string; quantity: number; administered_at: string | null; inventory_name: string; administered_by_name: string }>>([])
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState('')
-
+  const [medicineInventory, setMedicineInventory] = useState<InventoryItem[]>([])
+  const [administeredMedicines, setAdministeredMedicines] = useState<Array<{ inventory_id: string; quantity: number }>>([
+    { inventory_id: '', quantity: 1 }
+  ])
+  const [showHealthRecord, setShowHealthRecord] = useState(false)
   // probe medical_records for missing columns (diagnosed_diseases, allergies, immunization_history)
   useEffect(() => {
     const probe = async () => {
@@ -68,6 +74,69 @@ export default function MedicalRecords() {
     }
     void load()
   }, [])
+
+  useEffect(() => {
+    const loadMedicineInventory = async () => {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('id,name,quantity_on_hand,unit')
+        .eq('category', 'medicine')
+        .order('name', { ascending: true })
+      if (error) {
+        toast.error(error.message || 'Failed to load medicine inventory')
+        return
+      }
+      setMedicineInventory((data ?? []) as InventoryItem[])
+    }
+    void loadMedicineInventory()
+  }, [])
+
+  const addMedicineRow = () => {
+    setAdministeredMedicines((prev) => [...prev, { inventory_id: '', quantity: 1 }])
+  }
+
+  const updateMedicineRow = (index: number, updates: Partial<{ inventory_id: string; quantity: number }>) => {
+    setAdministeredMedicines((prev) =>
+      prev.map((row, idx) => (idx === index ? { ...row, ...updates } : row))
+    )
+  }
+
+  const removeMedicineRow = (index: number) => {
+    setAdministeredMedicines((prev) => prev.filter((_, idx) => idx !== index))
+  }
+
+  const loadAdministeredMedicineHistory = async (medicalRecordId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('administered_medicines')
+        .select(`
+          id,
+          quantity,
+          administered_at,
+          inventory:inventory_id ( name ),
+          administered_by:profiles!administered_medicines_administered_by_fkey ( full_name )
+        `)
+        .eq('medical_record_id', medicalRecordId)
+        .order('administered_at', { ascending: false })
+
+      if (error) {
+        toast.error(error.message || 'Failed to load administered medicine history')
+        return
+      }
+
+      setAdministeredMedicineHistory(
+        (data ?? []).map((item: any) => ({
+          id: item.id,
+          quantity: item.quantity,
+          administered_at: item.administered_at,
+          inventory_name: item.inventory?.name || 'Unknown',
+          administered_by_name: item.administered_by?.full_name || 'Unknown'
+        }))
+      )
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load administered medicine history')
+    }
+  }
 
   // Update selected province when patientInfo changes
   useEffect(() => {
@@ -120,6 +189,12 @@ export default function MedicalRecords() {
       return
     }
     setRecord(data ?? {})
+    setAdministeredMedicines([{ inventory_id: '', quantity: 1 }])
+    if ((data as any)?.id) {
+      await loadAdministeredMedicineHistory((data as any).id)
+    } else {
+      setAdministeredMedicineHistory([])
+    }
     // load medical history (clinic visits)
     try {
       const { data: visits } = await supabase
@@ -158,78 +233,7 @@ export default function MedicalRecords() {
 
   const openPrintableRecord = () => {
     if (!selected) return
-    const physician = getDisplayName(profile?.full_name, profile?.role) || '[YOUR NAME], [YOUR COMPANY NAME]'
-    const dob = formatDate(selected.date_of_birth || null)
-    const address = selected.address_field?.trim() || 'N/A'
-
-    const visitsHtml = medicalHistory.length > 0
-      ? medicalHistory.map(v => `
-        <tr>
-          <td style="padding:8px;border-bottom:1px solid #eee;">${new Date(v.visit_date).toLocaleDateString()}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;">${(v.complaint || 'N/A')}</td>
-          <td style="padding:8px;border-bottom:1px solid #eee;">${(v.disposition || '').replace(/_/g,' ')}</td>
-        </tr>
-      `).join('')
-      : `<tr><td colspan="3" style="padding:8px">No clinic visits recorded.</td></tr>`
-
-    const html = `<!doctype html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <title>Medical Record - ${selected.last_name}, ${selected.first_name}</title>
-      <style>
-        body { font-family: Arial, Helvetica, sans-serif; color: #1f2937; padding: 28px; }
-        .header { background: linear-gradient(90deg,#60a5fa,#93c5fd); padding:28px; color:#fff; border-radius:6px; }
-        h1 { margin:0; font-size:24px; }
-        .sub { margin-top:6px; color:rgba(255,255,255,0.95); }
-        table.info { width:100%; border-collapse:collapse; margin-top:20px; }
-        table.info td { padding:10px; border:1px solid #e6eef8; }
-        table.visits { width:100%; border-collapse:collapse; margin-top:18px; }
-        table.visits th { text-align:left; padding:8px; background:#f8fafc; border-bottom:1px solid #e6eef8; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>Medical Record</h1>
-        <div class="sub">Physician: ${physician}</div>
-      </div>
-
-      <p style="margin-top:18px;color:#334155;">The following information is a comprehensive medical record of the patient, intended for professional use only. This document ensures a detailed overview of the patient's medical history and current health status.</p>
-
-      <table class="info">
-        <tr><td style="width:30%;font-weight:600">Name:</td><td>${selected.first_name} ${selected.middle_name ? selected.middle_name + ' ' : ''}${selected.last_name}</td></tr>
-        <tr><td style="font-weight:600">Date of Birth:</td><td>${dob}</td></tr>
-        <tr><td style="font-weight:600">Gender:</td><td>${formatSex(selected.sex)}</td></tr>
-        <tr><td style="font-weight:600">Contact Number:</td><td>${selected.contact_number || 'N/A'}</td></tr>
-        <tr><td style="font-weight:600">Email:</td><td>${selected.guardian_email || 'N/A'}</td></tr>
-        <tr><td style="font-weight:600">Address:</td><td>${address || 'N/A'}</td></tr>
-      </table>
-
-      <h3 style="margin-top:22px;">Medical History</h3>
-      <p style="color:#374151">${(medicalHistory.length > 0) ? 'Summary of recent clinic visits (most recent first):' : 'No recorded clinic visits.'}</p>
-
-      <table class="visits">
-        <thead>
-          <tr><th style="padding:8px">Date</th><th style="padding:8px">Complaint</th><th style="padding:8px">Disposition</th></tr>
-        </thead>
-        <tbody>
-          ${visitsHtml}
-        </tbody>
-      </table>
-
-      <div style="margin-top:22px;color:#6b7280;font-size:13px">Generated: ${new Date().toLocaleString()}</div>
-      <div style="position:fixed;right:20px;bottom:20px;"><button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;padding:10px 14px;border-radius:6px;cursor:pointer">Print</button></div>
-    </body>
-    </html>`
-
-    const w = window.open('', '_blank')
-    if (!w) {
-      toast.error('Failed to open new window for printable record')
-      return
-    }
-    w.document.open()
-    w.document.write(html)
-    w.document.close()
+    setShowHealthRecord(true)
   }
 
   const savePatientInfo = async () => {
@@ -267,8 +271,51 @@ export default function MedicalRecords() {
   const handleSave = async () => {
     if (!selected) return
     try {
+      const medicineRows = administeredMedicines
+        .filter((row) => row.inventory_id)
+        .map((row) => ({
+          inventory_id: row.inventory_id,
+          quantity: Number(row.quantity) || 0
+        }))
+
+      if (medicineRows.some((row) => row.quantity < 1)) {
+        toast.error('Please enter a quantity of at least 1 for each medicine')
+        return
+      }
+
+      let inventoryById: Record<string, { id: string; name: string; quantity_on_hand: number }> = {}
+      if (medicineRows.length > 0) {
+        const inventoryIds = Array.from(new Set(medicineRows.map((row) => row.inventory_id)))
+        const { data: inventoryRows, error: inventoryError } = await supabase
+          .from('inventory')
+          .select('id,name,quantity_on_hand')
+          .in('id', inventoryIds)
+        if (inventoryError) throw inventoryError
+
+        inventoryById = Object.fromEntries(
+          (inventoryRows ?? []).map((item: any) => [item.id, item])
+        )
+
+        const requestedTotals = medicineRows.reduce<Record<string, number>>((acc, row) => {
+          acc[row.inventory_id] = (acc[row.inventory_id] || 0) + row.quantity
+          return acc
+        }, {})
+
+        for (const [inventoryId, totalQuantity] of Object.entries(requestedTotals)) {
+          const item = inventoryById[inventoryId]
+          if (!item) {
+            toast.error('Selected medicine not found')
+            return
+          }
+          if (item.quantity_on_hand - totalQuantity < 0) {
+            toast.error(`Insufficient stock for ${item.name}`)
+            return
+          }
+        }
+      }
+
+      let medicalRecordId = (record as any).id
       if ((record as any).id) {
-        // update
         const payload: Record<string, unknown> = {
           last_updated_by: profile?.id || null,
           last_updated_at: new Date().toISOString()
@@ -280,11 +327,10 @@ export default function MedicalRecords() {
         const { error } = await supabase
           .from('medical_records')
           .update(payload)
-          .eq('id', (record as any).id)
+          .eq('id', medicalRecordId)
         if (error) throw error
         toast.success('Medical record updated')
       } else {
-        // insert
         const payload: Record<string, unknown> = {
           patient_id: selected.id,
           last_updated_by: profile?.id || null
@@ -293,10 +339,48 @@ export default function MedicalRecords() {
         if (!missingMedColumns.allergies) payload.allergies = record.allergies || null
         if (!missingMedColumns.immunization_history) payload.immunization_history = record.immunization_history || null
 
-        const { error } = await supabase.from('medical_records').insert(payload)
+        const { data: insertedRecord, error } = await supabase
+          .from('medical_records')
+          .insert(payload)
+          .select('id')
+          .single()
         if (error) throw error
+        medicalRecordId = insertedRecord?.id
         toast.success('Medical record saved')
       }
+
+      if (medicalRecordId && medicineRows.length > 0) {
+        const administeredRows = medicineRows.map((row) => ({
+          medical_record_id: medicalRecordId,
+          inventory_id: row.inventory_id,
+          quantity: row.quantity,
+          administered_by: profile?.id || null
+        }))
+
+        const { error: administeredError } = await supabase
+          .from('administered_medicines')
+          .insert(administeredRows)
+        if (administeredError) throw administeredError
+
+        const updateTotals = medicineRows.reduce<Record<string, number>>((acc, row) => {
+          acc[row.inventory_id] = (acc[row.inventory_id] || 0) + row.quantity
+          return acc
+        }, {})
+
+        const inventoryUpdates = await Promise.all(
+          Object.entries(updateTotals).map(async ([inventoryId, totalQuantity]) => {
+            const { error: updateError } = await supabase
+              .from('inventory')
+              .update({ quantity_on_hand: inventoryById[inventoryId].quantity_on_hand - totalQuantity })
+              .eq('id', inventoryId)
+            return updateError
+          })
+        )
+
+        const firstInventoryError = inventoryUpdates.find((error) => error)
+        if (firstInventoryError) throw firstInventoryError
+      }
+
       setShowModal(false)
     } catch (err: any) {
       toast.error(err.message || 'Failed to save medical record')
@@ -500,6 +584,79 @@ export default function MedicalRecords() {
                 <label className="mb-1 block text-sm font-medium">Immunization history / notes</label>
                 <textarea rows={3} className="input-field w-full min-w-0" value={record.immunization_history || ''} onChange={(e) => setRecord((r) => ({ ...r, immunization_history: e.target.value }))} disabled={!!missingMedColumns.immunization_history} />
               </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-700">Administered Medicine</h3>
+                  <button type="button" className="btn-secondary" onClick={addMedicineRow}>Add Medicine</button>
+                </div>
+                {administeredMedicines.map((medicine, index) => (
+                  <div key={index} className="grid gap-3 sm:grid-cols-[1.9fr_0.75fr_auto] items-end">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Medicine</label>
+                      <select
+                        className="input-field w-full"
+                        value={medicine.inventory_id}
+                        onChange={(e) => updateMedicineRow(index, { inventory_id: e.target.value })}
+                      >
+                        <option value="">Select medicine</option>
+                        {medicineInventory.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} ({item.quantity_on_hand} {item.unit} available)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Quantity</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="input-field w-full"
+                        value={medicine.quantity}
+                        onChange={(e) => updateMedicineRow(index, { quantity: Math.max(1, Number(e.target.value) || 1) })}
+                      />
+                    </div>
+                    <button type="button" className="btn-secondary" onClick={() => removeMedicineRow(index)}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {medicineInventory.length === 0 && (
+                  <p className="text-sm text-slate-500">No medicine inventory items are available.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <div className="mb-3">
+                  <h3 className="text-sm font-semibold text-slate-700">Administered Medicine History</h3>
+                </div>
+                {administeredMedicineHistory.length === 0 ? (
+                  <p className="text-sm text-slate-500">No medicines administered yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="border-b border-slate-200 bg-slate-50">
+                        <tr>
+                          <th className="px-3 py-2 font-medium text-slate-600">Medicine Name</th>
+                          <th className="px-3 py-2 font-medium text-slate-600">Quantity</th>
+                          <th className="px-3 py-2 font-medium text-slate-600">Administered By</th>
+                          <th className="px-3 py-2 font-medium text-slate-600">Date &amp; Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {administeredMedicineHistory.map((item) => (
+                          <tr key={item.id} className="border-b border-slate-200">
+                            <td className="px-3 py-2">{item.inventory_name}</td>
+                            <td className="px-3 py-2">{item.quantity}</td>
+                            <td className="px-3 py-2">{item.administered_by_name}</td>
+                            <td className="px-3 py-2">{item.administered_at ? new Date(item.administered_at).toLocaleString() : 'N/A'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
@@ -507,6 +664,15 @@ export default function MedicalRecords() {
             </div>
           </div>
         </div>
+      )}
+
+      {showHealthRecord && selected && (
+        <IndividualHealthRecordForm
+          key={selected.id}
+          patient={selected}
+          medicalRecord={record}
+          onClose={() => setShowHealthRecord(false)}
+        />
       )}
     </div>
   )
